@@ -3,12 +3,16 @@ import { characterRows } from "../service/CharacterList.mjs";
 import { syncBody, syncErrorKey, syncFlag, syncOutcome } from "../service/CharacterSync.mjs";
 import { isWorldLinked, normalizeWorldLink } from "../service/WorldLink.mjs";
 import { isCollapsed, toggleSection } from "../service/SectionState.mjs";
-import { MODULE_ID, readCollapsedSections, readWorldLink, writeCollapsedSections, writeWorldLink } from "../config/ModuleSettings.mjs";
+import {
+  MODULE_ID, readAutoSendCombat, readCollapsedSections, readWorldLink, writeAutoSendCombat, writeCollapsedSections, writeWorldLink
+} from "../config/ModuleSettings.mjs";
 import { userRows, worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { CombatantInspector } from "./CombatantInspector.mjs";
+import { CombatPayloadPreview } from "./CombatPayloadPreview.mjs";
 import { CharacterExportPreview } from "./CharacterExportPreview.mjs";
 import { SheetBrowser } from "./SheetBrowser.mjs";
+import { sendCombat } from "./CombatSync.mjs";
 
 const { AbstractSidebarTab } = foundry.applications.sidebar;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -24,6 +28,8 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     actions: {
       toggleSection: OrganizrSidebarTab.#onToggleSection,
       inspectCombatant: OrganizrSidebarTab.#onInspectCombatant,
+      previewCombat: OrganizrSidebarTab.#onPreviewCombat,
+      sendCombat: OrganizrSidebarTab.#onSendCombat,
       previewCharacter: OrganizrSidebarTab.#onPreviewCharacter,
       syncCharacter: OrganizrSidebarTab.#onSyncCharacter,
       openSheetBrowser: OrganizrSidebarTab.#onOpenSheetBrowser,
@@ -59,6 +65,20 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     const next = toggleSection(readCollapsedSections(), target.dataset.section);
     await writeCollapsedSections(next);
     this.render();
+  }
+
+  static #onPreviewCombat() {
+    if (game.combat) CombatPayloadPreview.show(game.combat);
+  }
+
+  static async #onSendCombat(event, target) {
+    if (!game.combat || !game.user.isGM) return;
+    target.disabled = true;
+    try {
+      await sendCombat(game.combat, { type: "manual", direction: 0 });
+    } finally {
+      target.disabled = false;
+    }
   }
 
   static #onInspectCombatant(event, target) {
@@ -105,6 +125,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
       return;
     }
     await writeWorldLink(link);
+    await writeAutoSendCombat(input.autoSendCombat);
     ui.notifications.info(game.i18n.localize("ORGANIZR.Settings.Saved"));
     this.render();
   }
@@ -138,6 +159,7 @@ function linkContext(link) {
     projectId: link.projectId,
     hasToken: Boolean(link.apiToken),
     linked: isWorldLinked(link),
+    autoSendCombat: readAutoSendCombat(),
     worldTitle: game.world.title
   };
 }

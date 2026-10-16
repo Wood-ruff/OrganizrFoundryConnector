@@ -7,7 +7,21 @@
       "None": "No combat is running.",
       "NotStarted": "Combat has not started yet.",
       "NoCombatants": "No combatants yet.",
-      "InspectTooltip": "Show live data"
+      "InspectTooltip": "Show live data",
+      "Preview": "Preview the combat JSON",
+      "PreviewTitle": "Combat payload",
+      "Send": "Send the combat to Organizr now",
+      "Sent": "Combat (round {round}) started in Organizr; turns, rounds, HP and statuses now follow.",
+      "Note": "Organizr: {note}",
+      "Errors": {
+        "Unreachable": "Combat sync: the Organizr server did not answer ({message}).",
+        "TokenRejected": "Combat sync: the API token was rejected. It may be expired or revoked.",
+        "WrongProject": "Combat sync: the API token is not allowed to use this project.",
+        "NotFound": "Combat sync: Organizr answered 404 ({message}).",
+        "AlreadyRunning": "Combat not sent: Organizr still has an open combat in this project. End it there first ({message}).",
+        "ServerError": "Combat sync: {message}",
+        "StateFailed": "Combat sync for {name} failed: {message}"
+      }
     },
     "Characters": {
       "Title": "Player characters",
@@ -90,6 +104,7 @@
       "TokenReplacePlaceholder": "Leave empty to keep the saved token",
       "TokenSaved": "A token is saved for this world. It is never shown again; paste a new one to replace it.",
       "TokenHint": "Create one on your Organizr profile page under \"API tokens\"; it starts with org_.",
+      "AutoSendCombat": "Send the combat to Organizr when it starts",
       "Save": "Save",
       "Clear": "Unlink",
       "Saved": "Organizr world link saved.",

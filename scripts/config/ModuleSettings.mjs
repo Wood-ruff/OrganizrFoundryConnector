@@ -6,6 +6,7 @@ export const SETTINGS = {
   serverUrl: "serverUrl",
   apiToken: "apiToken",
   projectId: "projectId",
+  autoSendCombat: "autoSendCombat",
   collapsedSections: "collapsedSections"
 };
 
@@ -14,6 +15,12 @@ export function registerModuleSettings() {
   game.settings.register(MODULE_ID, SETTINGS.serverUrl, worldString());
   game.settings.register(MODULE_ID, SETTINGS.apiToken, worldString());
   game.settings.register(MODULE_ID, SETTINGS.projectId, worldString());
+  game.settings.register(MODULE_ID, SETTINGS.autoSendCombat, {
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: true
+  });
   game.settings.register(MODULE_ID, SETTINGS.collapsedSections, {
     scope: "client",
     config: false,
@@ -38,6 +45,14 @@ export async function writeWorldLink(link) {
   await game.settings.set(MODULE_ID, SETTINGS.serverUrl, link.serverUrl);
   await game.settings.set(MODULE_ID, SETTINGS.apiToken, link.apiToken);
   await game.settings.set(MODULE_ID, SETTINGS.projectId, link.projectId);
+}
+
+export function readAutoSendCombat() {
+  return Boolean(game.settings.get(MODULE_ID, SETTINGS.autoSendCombat));
+}
+
+export async function writeAutoSendCombat(enabled) {
+  await game.settings.set(MODULE_ID, SETTINGS.autoSendCombat, Boolean(enabled));
 }
 
 export function readCollapsedSections() {

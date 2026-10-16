@@ -17,6 +17,29 @@ export function createOrganizrClient(fetchImpl = globalThis.fetch) {
       return readJson(response);
     },
 
+    async pushCombat({ serverUrl, apiToken, projectId }, body) {
+      const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/combats`;
+      const response = await send(fetchImpl, url, apiToken, { method: "POST", body });
+      return readJson(response);
+    },
+
+    async moveCombat({ serverUrl, apiToken, projectId }, action) {
+      const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/combat/${action}`;
+      const response = await send(fetchImpl, url, apiToken, { method: "POST" });
+      return readJson(response);
+    },
+
+    async endCombat({ serverUrl, apiToken, projectId }) {
+      const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/combat`;
+      await send(fetchImpl, url, apiToken, { method: "DELETE" });
+    },
+
+    async pushCombatantState({ serverUrl, apiToken, projectId }, combatantId, body) {
+      const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/combat/combatants/${encodeURIComponent(combatantId)}`;
+      const response = await send(fetchImpl, url, apiToken, { method: "PUT", body });
+      return readJson(response);
+    },
+
     async listSheets({ serverUrl, apiToken }, projectId) {
       const query = projectId ? `?project=${encodeURIComponent(projectId)}` : "";
       const response = await send(fetchImpl, `${serverUrl}/api/foundry/sheets${query}`, apiToken, { method: "GET" });

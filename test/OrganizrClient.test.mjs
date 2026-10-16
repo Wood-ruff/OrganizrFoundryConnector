@@ -117,3 +117,35 @@ test("linkSheet posts the Foundry uuid to the sheet's link path", async () => {
   assert.equal(calls[0].init.method, "POST");
   assert.equal(calls[0].init.body, '{"uuid":"Actor.Ab12","worldId":"w"}');
 });
+
+test("pushCombat posts the combat payload to the project's combats path", async () => {
+  const calls = [];
+  const client = createOrganizrClient(fakeFetch(200, { ok: true }, calls));
+  await client.pushCombat(link, { event: { type: "start" }, combatants: [] });
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/projects/12/combats");
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer org_secret");
+  assert.equal(calls[0].init.body, '{"event":{"type":"start"},"combatants":[]}');
+});
+
+test("combat moves post to the action path without a body, end sends DELETE", async () => {
+  const calls = [];
+  const client = createOrganizrClient(fakeFetch(200, { round: 2 }, calls));
+  await client.moveCombat(link, "next-turn");
+  await client.endCombat(link);
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/projects/12/combat/next-turn");
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[0].init.body, undefined);
+  assert.equal("Content-Type" in calls[0].init.headers, false);
+  assert.equal(calls[1].url, "https://organizr.example/api/foundry/projects/12/combat");
+  assert.equal(calls[1].init.method, "DELETE");
+});
+
+test("pushCombatantState PUTs the state to the combatant path", async () => {
+  const calls = [];
+  const client = createOrganizrClient(fakeFetch(200, {}, calls));
+  await client.pushCombatantState(link, "c0", { id: "c0", defeated: true });
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/projects/12/combat/combatants/c0");
+  assert.equal(calls[0].init.method, "PUT");
+  assert.equal(calls[0].init.body, '{"id":"c0","defeated":true}');
+});

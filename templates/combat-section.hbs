@@ -8,6 +8,17 @@
     {{#if combat.started}}
       <span class="organizr-round">{{localize "ORGANIZR.Combat.Round" round=combat.round}}</span>
     {{/if}}
+    {{#if combat.exists}}
+      <button type="button" class="organizr-icon-button" data-action="previewCombat"
+              data-tooltip="{{localize "ORGANIZR.Combat.Preview"}}" aria-label="{{localize "ORGANIZR.Combat.Preview"}}">
+        <i class="fa-solid fa-code"></i>
+      </button>
+      <button type="button" class="organizr-icon-button" data-action="sendCombat"
+              data-tooltip="{{localize "ORGANIZR.Combat.Send"}}" aria-label="{{localize "ORGANIZR.Combat.Send"}}"
+              {{#unless linked}}disabled{{/unless}}>
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+      </button>
+    {{/if}}
   </header>
 
   <div class="organizr-section-body">

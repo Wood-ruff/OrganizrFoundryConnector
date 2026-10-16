@@ -27,6 +27,12 @@
         <input type="password" id="organizr-api-token" name="apiToken" value="" placeholder="{{#if link.hasToken}}{{localize "ORGANIZR.Settings.TokenReplacePlaceholder"}}{{else}}{{localize "ORGANIZR.Settings.TokenPlaceholder"}}{{/if}}">
         <span class="organizr-field-hint">{{#if link.hasToken}}{{localize "ORGANIZR.Settings.TokenSaved"}}{{else}}{{localize "ORGANIZR.Settings.TokenHint"}}{{/if}}</span>
       </div>
+      <div class="form-group organizr-checkbox">
+        <label>
+          <input type="checkbox" name="autoSendCombat" {{#if link.autoSendCombat}}checked{{/if}}>
+          {{localize "ORGANIZR.Settings.AutoSendCombat"}}
+        </label>
+      </div>
       <div class="organizr-form-actions">
         <button type="button" data-action="saveWorldLink"><i class="fa-solid fa-floppy-disk"></i> {{localize "ORGANIZR.Settings.Save"}}</button>
         {{#if link.linked}}

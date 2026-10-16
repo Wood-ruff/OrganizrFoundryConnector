@@ -368,3 +368,13 @@
   text-transform: none;
   letter-spacing: normal;
 }
+
+.organizr-section-header .organizr-icon-button {
+  margin-left: 0.25rem;
+}
+
+.organizr-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
