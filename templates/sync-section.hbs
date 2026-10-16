@@ -1,0 +1,18 @@
+<section class="organizr-section organizr-sync{{#if syncCollapsed}} collapsed{{/if}}">
+  <header class="organizr-section-header">
+    <button type="button" class="organizr-section-toggle" data-action="toggleSection" data-section="sync"
+            aria-expanded="{{#if syncCollapsed}}false{{else}}true{{/if}}">
+      <i class="fa-solid {{#if syncCollapsed}}fa-caret-right{{else}}fa-caret-down{{/if}}"></i>
+      <h3>{{localize "ORGANIZR.Sync.Title"}}</h3>
+    </button>
+  </header>
+
+  <div class="organizr-section-body">
+    {{#unless linked}}
+      <p class="organizr-hint">{{localize "ORGANIZR.Sync.NotLinkedHint"}}</p>
+    {{/unless}}
+    <button type="button" data-action="openSheetBrowser" {{#unless linked}}disabled{{/unless}}>
+      <i class="fa-solid fa-cloud-arrow-down"></i> {{localize "ORGANIZR.Sync.Open"}}
+    </button>
+  </div>
+</section>

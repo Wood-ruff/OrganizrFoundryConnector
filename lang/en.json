@@ -30,6 +30,36 @@
         "ServerError": "{name}: Organizr refused the sync: {message}"
       }
     },
+    "Sync": {
+      "Title": "Sync",
+      "Open": "Browse Organizr sheets",
+      "NotLinkedHint": "Link this world to an Organizr project below to browse its sheets."
+    },
+    "Browser": {
+      "Title": "Organizr sheets",
+      "Search": "Search name, type, level, tags, project…",
+      "Reload": "Reload the list",
+      "Loading": "Loading sheets from Organizr…",
+      "Empty": "The token can read no sheets.",
+      "NoMatch": "No sheet matches the search.",
+      "InWorld": "Already in this world",
+      "Level": "Lv {level}",
+      "Types": {
+        "character": "Player characters",
+        "npc": "NPCs",
+        "item": "Items",
+        "spell": "Spells",
+        "action": "Actions",
+        "loot": "Loot",
+        "status": "Statuses"
+      },
+      "Errors": {
+        "Unreachable": "The Organizr server did not answer.",
+        "TokenRejected": "The API token was rejected. It may be expired or revoked.",
+        "Forbidden": "The API token is not allowed to list these sheets.",
+        "ServerError": "Organizr could not list the sheets."
+      }
+    },
     "Settings": {
       "Title": "World link",
       "Hint": "Links the world \"{world}\" to an Organizr project. Stored with the world.",

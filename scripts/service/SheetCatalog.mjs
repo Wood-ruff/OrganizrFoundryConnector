@@ -1,0 +1,83 @@
+const KNOWN_TYPES = ["character", "npc", "item", "spell", "action", "loot", "status"];
+
+/**
+ * Keeps the sheet entries whose searchable text contains every word of the term
+ * (name, type, level, tags, project name; never images).
+ */
+export function filterSheets(entries, term) {
+  const words = (term ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return [...(entries ?? [])];
+  return (entries ?? []).filter((entry) => {
+    const text = searchText(entry);
+    return words.every((word) => text.includes(word));
+  });
+}
+
+/** Groups sheet entries into projects, each holding its sheet types in server order. */
+export function groupSheets(entries) {
+  const projects = new Map();
+  for (const entry of entries ?? []) {
+    const project = projectGroup(projects, entry);
+    const type = typeGroup(project, entry);
+    type.sheets.push(sheetRow(entry));
+  }
+  return [...projects.values()].map(finishProject);
+}
+
+/** The Foundry actor id behind a synced sheet's uuid ("Actor.<id>"), or null. */
+export function worldActorId(uuid) {
+  if (typeof uuid !== "string" || !uuid.startsWith("Actor.")) return null;
+  const id = uuid.slice("Actor.".length);
+  return id.includes(".") ? null : id;
+}
+
+/** Localization key for a failed sheet list request, by HTTP status (0 = no response). */
+export function listErrorKey(status) {
+  if (status === 0) return "ORGANIZR.Browser.Errors.Unreachable";
+  if (status === 401) return "ORGANIZR.Browser.Errors.TokenRejected";
+  if (status === 403) return "ORGANIZR.Browser.Errors.Forbidden";
+  return "ORGANIZR.Browser.Errors.ServerError";
+}
+
+function searchText(entry) {
+  const parts = [entry.name, entry.type, entry.level, entry.projectName, ...(entry.tags ?? [])];
+  return parts.filter((part) => part !== null && part !== undefined).join(" ").toLowerCase();
+}
+
+function projectGroup(projects, entry) {
+  const key = String(entry.projectId);
+  if (!projects.has(key)) {
+    projects.set(key, { projectId: entry.projectId, projectName: entry.projectName ?? "", types: new Map() });
+  }
+  return projects.get(key);
+}
+
+function typeGroup(project, entry) {
+  const type = entry.type ?? "other";
+  if (!project.types.has(type)) {
+    project.types.set(type, { type, labelKey: typeLabelKey(type), sheets: [] });
+  }
+  return project.types.get(type);
+}
+
+function typeLabelKey(type) {
+  return KNOWN_TYPES.includes(type) ? `ORGANIZR.Browser.Types.${type}` : null;
+}
+
+function sheetRow(entry) {
+  return {
+    fileId: entry.fileId,
+    name: entry.name ?? "",
+    level: entry.level ?? null,
+    imageFileId: entry.imageFileId ?? null,
+    tags: entry.tags ?? [],
+    worldActorId: worldActorId(entry.uuid),
+    updatedAt: entry.updatedAt ?? null
+  };
+}
+
+function finishProject(project) {
+  const types = [...project.types.values()];
+  const count = types.reduce((sum, type) => sum + type.sheets.length, 0);
+  return { projectId: project.projectId, projectName: project.projectName, types, count };
+}

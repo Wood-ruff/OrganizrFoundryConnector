@@ -8,6 +8,7 @@ import { userRows, worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { CombatantInspector } from "./CombatantInspector.mjs";
 import { CharacterExportPreview } from "./CharacterExportPreview.mjs";
+import { SheetBrowser } from "./SheetBrowser.mjs";
 
 const { AbstractSidebarTab } = foundry.applications.sidebar;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -25,6 +26,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
       inspectCombatant: OrganizrSidebarTab.#onInspectCombatant,
       previewCharacter: OrganizrSidebarTab.#onPreviewCharacter,
       syncCharacter: OrganizrSidebarTab.#onSyncCharacter,
+      openSheetBrowser: OrganizrSidebarTab.#onOpenSheetBrowser,
       saveWorldLink: OrganizrSidebarTab.#onSaveWorldLink,
       clearWorldLink: OrganizrSidebarTab.#onClearWorldLink
     }
@@ -33,6 +35,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
   static PARTS = {
     combat: { template: "modules/organizr-foundry-connector/templates/combat-section.hbs" },
     characters: { template: "modules/organizr-foundry-connector/templates/characters-section.hbs" },
+    sync: { template: "modules/organizr-foundry-connector/templates/sync-section.hbs" },
     settings: { template: "modules/organizr-foundry-connector/templates/settings-section.hbs" }
   };
 
@@ -46,6 +49,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     context.linked = isWorldLinked(link);
     context.combatCollapsed = isCollapsed(collapsed, "combat");
     context.charactersCollapsed = isCollapsed(collapsed, "characters");
+    context.syncCollapsed = isCollapsed(collapsed, "sync");
     context.settingsCollapsed = isCollapsed(collapsed, "settings");
     context.link = linkContext(link);
     return context;
@@ -81,6 +85,15 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     } finally {
       this.render({ parts: ["characters"] });
     }
+  }
+
+  static #onOpenSheetBrowser() {
+    if (!game.user.isGM) return;
+    if (!isWorldLinked(readWorldLink())) {
+      ui.notifications.warn(game.i18n.localize("ORGANIZR.Characters.Errors.NotLinked"));
+      return;
+    }
+    SheetBrowser.show();
   }
 
   static async #onSaveWorldLink(event, target) {

@@ -13,22 +13,39 @@ export function createOrganizrClient(fetchImpl = globalThis.fetch) {
     async pushCharacter({ serverUrl, apiToken, projectId }, body, folderId) {
       const query = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
       const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/characters${query}`;
-      return postJson(fetchImpl, url, apiToken, body);
+      const response = await send(fetchImpl, url, apiToken, { method: "POST", body });
+      return readJson(response);
+    },
+
+    async listSheets({ serverUrl, apiToken }, projectId) {
+      const query = projectId ? `?project=${encodeURIComponent(projectId)}` : "";
+      const response = await send(fetchImpl, `${serverUrl}/api/foundry/sheets${query}`, apiToken, { method: "GET" });
+      return readJson(response);
+    },
+
+    async fetchFileBlob({ serverUrl, apiToken }, fileId) {
+      const url = `${serverUrl}/api/foundry/files/${encodeURIComponent(fileId)}/content`;
+      const response = await send(fetchImpl, url, apiToken, { method: "GET" });
+      return response.blob();
     }
   };
 }
 
-async function postJson(fetchImpl, url, token, body) {
-  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+async function send(fetchImpl, url, token, { method, body }) {
+  const headers = { Authorization: `Bearer ${token}` };
+  const init = { method, headers };
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(body);
+  }
   let response;
   try {
-    response = await fetchImpl(url, { method: "POST", headers, body: JSON.stringify(body) });
+    response = await fetchImpl(url, init);
   } catch (error) {
     throw new OrganizrRequestError(0, error.message);
   }
-  const payload = await readJson(response);
-  if (!response.ok) throw new OrganizrRequestError(response.status, errorMessage(response, payload));
-  return payload;
+  if (!response.ok) throw new OrganizrRequestError(response.status, await errorMessage(response));
+  return response;
 }
 
 async function readJson(response) {
@@ -39,7 +56,8 @@ async function readJson(response) {
   }
 }
 
-function errorMessage(response, payload) {
+async function errorMessage(response) {
+  const payload = await readJson(response);
   if (payload && typeof payload.error === "string") return payload.error;
   return `HTTP ${response.status}`;
 }

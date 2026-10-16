@@ -1,0 +1,40 @@
+<div class="organizr-sheet-list">
+  {{#if loading}}
+    <p class="organizr-hint"><i class="fa-solid fa-spinner fa-spin"></i> {{localize "ORGANIZR.Browser.Loading"}}</p>
+  {{else if errorKey}}
+    <p class="organizr-error">{{localize errorKey}}</p>
+  {{else if loaded}}
+    {{#unless total}}
+      <p class="organizr-hint">{{localize "ORGANIZR.Browser.Empty"}}</p>
+    {{else}}
+      {{#unless projects.length}}
+        <p class="organizr-hint">{{localize "ORGANIZR.Browser.NoMatch"}}</p>
+      {{/unless}}
+      {{#each projects as |project|}}
+        <section class="organizr-browser-project">
+          <h3><i class="fa-solid fa-folder"></i> {{project.projectName}} <span class="organizr-count">{{project.count}}</span></h3>
+          {{#each project.types as |group|}}
+            <h4>{{#if group.labelKey}}{{localize group.labelKey}}{{else}}{{group.type}}{{/if}}</h4>
+            <ul class="organizr-sheet-rows">
+              {{#each group.sheets as |sheet|}}
+                <li class="organizr-sheet-row">
+                  {{#if sheet.imageFileId}}
+                    <img class="organizr-sheet-img" alt="" data-file-id="{{sheet.imageFileId}}"{{#if sheet.imageUrl}} src="{{sheet.imageUrl}}"{{/if}}>
+                  {{else}}
+                    <span class="organizr-sheet-img placeholder"><i class="fa-solid fa-file-lines"></i></span>
+                  {{/if}}
+                  <span class="organizr-sheet-text">
+                    <span class="organizr-sheet-name">{{sheet.name}}</span>
+                    {{#if sheet.tags.length}}<span class="organizr-sheet-tags">{{#each sheet.tags}}<span class="organizr-tag">{{this}}</span>{{/each}}</span>{{/if}}
+                  </span>
+                  {{#if (ne sheet.level null)}}<span class="organizr-sheet-level">{{localize "ORGANIZR.Browser.Level" level=sheet.level}}</span>{{/if}}
+                  {{#if sheet.inWorld}}<span class="organizr-sync-state in-world" data-tooltip="{{localize "ORGANIZR.Browser.InWorld"}}"><i class="fa-solid fa-circle-check"></i></span>{{/if}}
+                </li>
+              {{/each}}
+            </ul>
+          {{/each}}
+        </section>
+      {{/each}}
+    {{/unless}}
+  {{/if}}
+</div>

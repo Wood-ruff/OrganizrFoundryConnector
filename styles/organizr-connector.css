@@ -221,3 +221,121 @@
   font-size: var(--font-size-11, 0.7rem);
   opacity: 0.7;
 }
+
+.organizr-sheet-browser .window-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.organizr-browser-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.organizr-browser-toolbar input {
+  flex: 1 1 auto;
+}
+
+.organizr-sheet-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.organizr-browser-project h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.organizr-browser-project h4 {
+  margin: 0.4rem 0 0.2rem;
+  font-size: var(--font-size-12, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  border: none;
+}
+
+.organizr-sheet-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.organizr-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.organizr-sheet-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.organizr-sheet-img {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.organizr-sheet-img.placeholder,
+.organizr-sheet-img.failed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+}
+
+.organizr-sheet-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.organizr-sheet-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.organizr-sheet-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.organizr-tag {
+  font-size: var(--font-size-10, 0.65rem);
+  padding: 0 0.3rem;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.organizr-sheet-level {
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 0.75rem);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.organizr-sync-state.in-world {
+  opacity: 1;
+  color: var(--color-level-success, #4caf50);
+}
+
+.organizr-error {
+  color: var(--color-level-error, #e53935);
+}

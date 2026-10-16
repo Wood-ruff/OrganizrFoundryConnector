@@ -58,3 +58,37 @@ test("a network failure is status 0 with the fetch message", async () => {
   const client = createOrganizrClient(async () => { throw new TypeError("Failed to fetch"); });
   await assert.rejects(client.pushCharacter(link, {}), { status: 0, message: "Failed to fetch" });
 });
+
+test("listSheets gets the sheet list with the bearer token, optionally narrowed to a project", async () => {
+  const calls = [];
+  const client = createOrganizrClient(fakeFetch(200, [{ fileId: 1 }], calls));
+
+  const all = await client.listSheets(link);
+  await client.listSheets(link, "12");
+
+  assert.deepEqual(all, [{ fileId: 1 }]);
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/sheets");
+  assert.equal(calls[0].init.method, "GET");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer org_secret");
+  assert.equal("Content-Type" in calls[0].init.headers, false);
+  assert.equal(calls[0].init.body, undefined);
+  assert.equal(calls[1].url, "https://organizr.example/api/foundry/sheets?project=12");
+});
+
+test("fetchFileBlob streams a file's content as a blob with the bearer token", async () => {
+  const calls = [];
+  const blob = { size: 3 };
+  const client = createOrganizrClient(async (url, init) => {
+    calls.push({ url, init });
+    return { ok: true, status: 200, blob: async () => blob };
+  });
+
+  assert.equal(await client.fetchFileBlob(link, 77), blob);
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/files/77/content");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer org_secret");
+});
+
+test("a rejected file request surfaces the status", async () => {
+  const client = createOrganizrClient(fakeFetch(403, { error: "Not your project" }, []));
+  await assert.rejects(client.fetchFileBlob(link, 77), { status: 403, message: "Not your project" });
+});
