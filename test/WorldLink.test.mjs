@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isWorldLinked, maskToken, normalizeWorldLink } from "../scripts/service/WorldLink.mjs";
+import { isWorldLinked, normalizeWorldLink } from "../scripts/service/WorldLink.mjs";
 
 test("normalizes whitespace and trailing slashes", () => {
   const { link, errors } = normalizeWorldLink({
@@ -42,10 +42,4 @@ test("a world is linked once it has a URL, a project and a token", () => {
   assert.equal(isWorldLinked({ serverUrl: "https://x", projectId: "1", apiToken: "" }), false);
   assert.equal(isWorldLinked({ serverUrl: "https://x", projectId: "", apiToken: "org_t" }), false);
   assert.equal(isWorldLinked({ serverUrl: "", projectId: "1", apiToken: "org_t" }), false);
-});
-
-test("tokens are masked to prefix and last four characters", () => {
-  assert.equal(maskToken(""), "");
-  assert.equal(maskToken("org_abc"), "****");
-  assert.equal(maskToken("org_secret-token-1234"), "org_****1234");
 });

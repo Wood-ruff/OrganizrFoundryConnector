@@ -19,13 +19,6 @@ export function isWorldLinked(link) {
   return Boolean(link.serverUrl) && Boolean(link.projectId) && Boolean(link.apiToken);
 }
 
-/** Masks a token for display, keeping its prefix and last characters. */
-export function maskToken(token) {
-  if (!token) return "";
-  if (token.length <= 8) return "****";
-  return token.slice(0, 4) + "****" + token.slice(-4);
-}
-
 function trimmedWithoutTrailingSlash(value) {
   return (value ?? "").trim().replace(/\/+$/, "");
 }

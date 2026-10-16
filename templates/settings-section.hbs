@@ -24,8 +24,8 @@
       </div>
       <div class="form-group">
         <label for="organizr-api-token">{{localize "ORGANIZR.Settings.ApiToken"}}</label>
-        <input type="password" id="organizr-api-token" name="apiToken" value="" placeholder="{{#if link.hasToken}}{{link.maskedToken}}{{else}}{{localize "ORGANIZR.Settings.TokenPlaceholder"}}{{/if}}">
-        <span class="organizr-field-hint">{{localize "ORGANIZR.Settings.TokenHint"}}</span>
+        <input type="password" id="organizr-api-token" name="apiToken" value="" placeholder="{{#if link.hasToken}}{{localize "ORGANIZR.Settings.TokenReplacePlaceholder"}}{{else}}{{localize "ORGANIZR.Settings.TokenPlaceholder"}}{{/if}}">
+        <span class="organizr-field-hint">{{#if link.hasToken}}{{localize "ORGANIZR.Settings.TokenSaved"}}{{else}}{{localize "ORGANIZR.Settings.TokenHint"}}{{/if}}</span>
       </div>
       <div class="organizr-form-actions">
         <button type="button" data-action="saveWorldLink"><i class="fa-solid fa-floppy-disk"></i> {{localize "ORGANIZR.Settings.Save"}}</button>

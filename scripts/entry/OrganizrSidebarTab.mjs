@@ -1,7 +1,7 @@
 import { combatOverview } from "../service/CombatOverview.mjs";
 import { characterRows } from "../service/CharacterList.mjs";
 import { syncBody, syncErrorKey, syncFlag, syncOutcome } from "../service/CharacterSync.mjs";
-import { isWorldLinked, maskToken, normalizeWorldLink } from "../service/WorldLink.mjs";
+import { isWorldLinked, normalizeWorldLink } from "../service/WorldLink.mjs";
 import { isCollapsed, toggleSection } from "../service/SectionState.mjs";
 import { MODULE_ID, readCollapsedSections, readWorldLink, writeCollapsedSections, writeWorldLink } from "../config/ModuleSettings.mjs";
 import { userRows, worldInfo } from "../config/WorldInfo.mjs";
@@ -122,7 +122,6 @@ function linkContext(link) {
     serverUrl: link.serverUrl,
     projectId: link.projectId,
     hasToken: Boolean(link.apiToken),
-    maskedToken: maskToken(link.apiToken),
     linked: isWorldLinked(link),
     worldTitle: game.world.title
   };

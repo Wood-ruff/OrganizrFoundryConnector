@@ -40,6 +40,8 @@
       "ProjectIdPlaceholder": "e.g. 12",
       "ApiToken": "API token",
       "TokenPlaceholder": "Paste a token",
+      "TokenReplacePlaceholder": "Leave empty to keep the saved token",
+      "TokenSaved": "A token is saved for this world. It is never shown again; paste a new one to replace it.",
       "TokenHint": "Create one on your Organizr profile page under \"API tokens\"; it starts with org_.",
       "Save": "Save",
       "Clear": "Unlink",
