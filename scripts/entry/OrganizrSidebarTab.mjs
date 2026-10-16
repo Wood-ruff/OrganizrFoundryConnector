@@ -1,13 +1,16 @@
 import { combatOverview } from "../service/CombatOverview.mjs";
+import { characterRows } from "../service/CharacterList.mjs";
 import { isWorldLinked, maskToken, normalizeWorldLink } from "../service/WorldLink.mjs";
 import { isCollapsed, toggleSection } from "../service/SectionState.mjs";
 import { readCollapsedSections, readWorldLink, writeCollapsedSections, writeWorldLink } from "../config/ModuleSettings.mjs";
+import { userRows } from "../config/WorldInfo.mjs";
 import { CombatantInspector } from "./CombatantInspector.mjs";
+import { CharacterExportPreview } from "./CharacterExportPreview.mjs";
 
 const { AbstractSidebarTab } = foundry.applications.sidebar;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
-/** Sidebar tab hosting the Organizr tools: combat overview and the per-world link settings. */
+/** Sidebar tab hosting the Organizr tools: combat overview, player characters and the per-world link. */
 export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSidebarTab) {
   static tabName = "organizr";
 
@@ -16,6 +19,8 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     actions: {
       toggleSection: OrganizrSidebarTab.#onToggleSection,
       inspectCombatant: OrganizrSidebarTab.#onInspectCombatant,
+      previewCharacter: OrganizrSidebarTab.#onPreviewCharacter,
+      syncCharacter: OrganizrSidebarTab.#onSyncCharacter,
       saveWorldLink: OrganizrSidebarTab.#onSaveWorldLink,
       clearWorldLink: OrganizrSidebarTab.#onClearWorldLink
     }
@@ -23,17 +28,21 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
 
   static PARTS = {
     combat: { template: "modules/organizr-foundry-connector/templates/combat-section.hbs" },
+    characters: { template: "modules/organizr-foundry-connector/templates/characters-section.hbs" },
     settings: { template: "modules/organizr-foundry-connector/templates/settings-section.hbs" }
   };
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     const collapsed = readCollapsedSections();
+    const link = readWorldLink();
     context.isGM = game.user.isGM;
     context.combat = combatOverview(game.combat, game.user);
+    context.characters = characterRows(game.actors.contents, userRows());
     context.combatCollapsed = isCollapsed(collapsed, "combat");
+    context.charactersCollapsed = isCollapsed(collapsed, "characters");
     context.settingsCollapsed = isCollapsed(collapsed, "settings");
-    context.link = linkContext(readWorldLink());
+    context.link = linkContext(link);
     return context;
   }
 
@@ -46,6 +55,18 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
   static #onInspectCombatant(event, target) {
     const combatant = game.combat?.combatants.get(target.dataset.combatantId);
     if (combatant) CombatantInspector.show(combatant);
+  }
+
+  static #onPreviewCharacter(event, target) {
+    const actor = game.actors.get(target.dataset.actorId);
+    if (actor) CharacterExportPreview.show(actor);
+  }
+
+  static #onSyncCharacter(event, target) {
+    const actor = game.actors.get(target.dataset.actorId);
+    if (!actor) return;
+    ui.notifications.warn(game.i18n.localize("ORGANIZR.Characters.SyncNotWired"));
+    CharacterExportPreview.show(actor);
   }
 
   static async #onSaveWorldLink(event, target) {

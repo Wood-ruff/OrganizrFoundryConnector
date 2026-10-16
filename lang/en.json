@@ -9,6 +9,15 @@
       "NoCombatants": "No combatants yet.",
       "InspectTooltip": "Show live data"
     },
+    "Characters": {
+      "Title": "Player characters",
+      "None": "No player characters in this world.",
+      "NoOwner": "no player owner",
+      "Preview": "Preview sync JSON",
+      "PreviewTitle": "Sync payload",
+      "Sync": "Sync to Organizr",
+      "SyncNotWired": "Sending to Organizr is not connected yet; showing the payload instead."
+    },
     "Settings": {
       "Title": "World link",
       "Hint": "Links the world \"{world}\" to an Organizr project. Stored with the world.",
@@ -29,8 +38,8 @@
     "Inspector": {
       "Title": "Combatant data",
       "Copy": "Copy JSON",
-      "Copied": "Combatant JSON copied to the clipboard.",
-      "Missing": "This combatant is no longer part of a combat."
+      "Copied": "JSON copied to the clipboard.",
+      "Missing": "This document no longer exists."
     }
   }
 }

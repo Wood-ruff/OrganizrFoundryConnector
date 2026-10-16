@@ -9,13 +9,20 @@ const COMBAT_HOOKS = [
   "combatTurnChange", "canvasReady"
 ];
 
+const CHARACTER_LIST_FIELDS = ["name", "img", "ownership", "type"];
+
 Hooks.once("init", () => {
   registerModuleSettings();
   registerSidebarTab();
 });
 
 Hooks.once("ready", () => {
-  for (const hook of COMBAT_HOOKS) Hooks.on(hook, rerenderTab);
+  for (const hook of COMBAT_HOOKS) Hooks.on(hook, () => rerenderPart("combat"));
+  Hooks.on("createActor", () => rerenderPart("characters"));
+  Hooks.on("deleteActor", () => rerenderPart("characters"));
+  Hooks.on("updateActor", (actor, changes) => {
+    if (touchesCharacterList(changes)) rerenderPart("characters");
+  });
 });
 
 function registerSidebarTab() {
@@ -34,9 +41,13 @@ function tabsWithOrganizrBeforeSettings(tabs) {
   return result;
 }
 
-function rerenderTab() {
+function touchesCharacterList(changes) {
+  return CHARACTER_LIST_FIELDS.some((field) => field in changes);
+}
+
+function rerenderPart(part) {
   const tab = ui[TAB_ID];
   if (!tab?.rendered) return;
-  tab.render({ parts: ["combat"] });
-  tab.popout?.render({ parts: ["combat"] });
+  tab.render({ parts: [part] });
+  tab.popout?.render({ parts: [part] });
 }

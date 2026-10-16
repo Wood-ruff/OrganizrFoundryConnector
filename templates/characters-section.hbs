@@ -1,0 +1,36 @@
+<section class="organizr-section organizr-characters{{#if charactersCollapsed}} collapsed{{/if}}">
+  <header class="organizr-section-header">
+    <button type="button" class="organizr-section-toggle" data-action="toggleSection" data-section="characters"
+            aria-expanded="{{#if charactersCollapsed}}false{{else}}true{{/if}}">
+      <i class="fa-solid {{#if charactersCollapsed}}fa-caret-right{{else}}fa-caret-down{{/if}}"></i>
+      <h3>{{localize "ORGANIZR.Characters.Title"}}</h3>
+    </button>
+    <span class="organizr-count">{{characters.length}}</span>
+  </header>
+
+  <div class="organizr-section-body">
+    {{#if characters.length}}
+      <ul class="organizr-characters-list">
+        {{#each characters as |ch|}}
+          <li class="organizr-character" data-actor-id="{{ch.id}}">
+            <img class="organizr-character-img" src="{{ch.img}}" alt="">
+            <span class="organizr-character-text">
+              <span class="organizr-character-name">{{ch.name}}</span>
+              <span class="organizr-character-owners">{{#if ch.hasPlayerOwner}}{{ch.ownersLabel}}{{else}}{{localize "ORGANIZR.Characters.NoOwner"}}{{/if}}</span>
+            </span>
+            <button type="button" class="organizr-icon-button" data-action="previewCharacter" data-actor-id="{{ch.id}}"
+                    data-tooltip="{{localize "ORGANIZR.Characters.Preview"}}" aria-label="{{localize "ORGANIZR.Characters.Preview"}}">
+              <i class="fa-solid fa-code"></i>
+            </button>
+            <button type="button" class="organizr-icon-button" data-action="syncCharacter" data-actor-id="{{ch.id}}"
+                    data-tooltip="{{localize "ORGANIZR.Characters.Sync"}}" aria-label="{{localize "ORGANIZR.Characters.Sync"}}">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </button>
+          </li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p class="organizr-hint">{{localize "ORGANIZR.Characters.None"}}</p>
+    {{/if}}
+  </div>
+</section>
