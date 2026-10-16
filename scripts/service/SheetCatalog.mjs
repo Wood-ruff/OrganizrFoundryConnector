@@ -1,3 +1,5 @@
+import { isImportable } from "./SheetImport.mjs";
+
 const KNOWN_TYPES = ["character", "npc", "item", "spell", "action", "loot", "status"];
 
 /**
@@ -67,6 +69,8 @@ function typeLabelKey(type) {
 function sheetRow(entry) {
   return {
     fileId: entry.fileId,
+    type: entry.type ?? "other",
+    importable: isImportable(entry.type),
     name: entry.name ?? "",
     level: entry.level ?? null,
     imageFileId: entry.imageFileId ?? null,
@@ -77,7 +81,21 @@ function sheetRow(entry) {
 }
 
 function finishProject(project) {
-  const types = [...project.types.values()];
+  const types = [...project.types.values()].map(finishType);
   const count = types.reduce((sum, type) => sum + type.sheets.length, 0);
-  return { projectId: project.projectId, projectName: project.projectName, types, count };
+  const importableCount = types.reduce((sum, type) => sum + type.importableCount, 0);
+  return { projectId: project.projectId, projectName: project.projectName, types, count, importableCount };
+}
+
+function finishType(type) {
+  const importableCount = type.sheets.filter((sheet) => sheet.importable).length;
+  return { ...type, importableCount };
+}
+
+/** File ids of the importable sheets in one project, or in one of its type groups when `type` is given. */
+export function importableFileIds(projects, projectId, type) {
+  const project = projects.find((candidate) => String(candidate.projectId) === String(projectId));
+  if (!project) return [];
+  const groups = type ? project.types.filter((group) => group.type === type) : project.types;
+  return groups.flatMap((group) => group.sheets.filter((sheet) => sheet.importable).map((sheet) => sheet.fileId));
 }

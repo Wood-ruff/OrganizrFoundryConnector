@@ -121,13 +121,15 @@ async function pushCharacter(actor, link) {
     result = await organizr.pushCharacter(link, syncBody(actor, worldInfo()));
   } catch (error) {
     const key = syncErrorKey(error.status ?? -1);
-    ui.notifications.error(game.i18n.format(key, { name: actor.name, message: error.message }));
+    ui.notifications.error(key, { localize: true, format: { name: actor.name, message: error.message } });
     return;
   }
   await actor.setFlag(MODULE_ID, "sync", syncFlag(result, link, new Date().toISOString()));
   const outcome = syncOutcome(result);
-  ui.notifications.info(game.i18n.format(outcome.key, { name: actor.name, ...outcome.data }));
-  for (const note of outcome.notes) ui.notifications.warn(`${actor.name}: ${note}`);
+  ui.notifications.info(outcome.key, { localize: true, format: { name: actor.name, ...outcome.data } });
+  for (const note of outcome.notes) {
+    ui.notifications.warn("ORGANIZR.Characters.SyncNote", { localize: true, format: { name: actor.name, note } });
+  }
 }
 
 function linkContext(link) {

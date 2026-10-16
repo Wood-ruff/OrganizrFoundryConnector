@@ -32,6 +32,17 @@ test("items without an id fall back to their position; unknown items get no uuid
   assert.equal("uuid" in body.items[1], false);
 });
 
+test("the body names the Organizr file when the actor carries a sheet or sync flag", () => {
+  const plain = syncBody(actor([], []), world);
+  assert.equal("organizr" in plain, false);
+
+  const imported = syncBody({ ...actor([], []), flags: { "organizr-foundry-connector": { sheet: { fileId: 5 } } } }, world);
+  assert.deepEqual(imported.organizr, { fileId: 5 });
+
+  const pushed = syncBody({ ...actor([], []), flags: { "organizr-foundry-connector": { sync: { characterFileId: 9 } } } }, world);
+  assert.deepEqual(pushed.organizr, { fileId: 9 });
+});
+
 test("an actor without items yields an empty item list", () => {
   const body = syncBody({ ...actor([], undefined), items: undefined }, world);
   assert.deepEqual(body.items, []);

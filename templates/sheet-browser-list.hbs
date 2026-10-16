@@ -12,12 +12,28 @@
       {{/unless}}
       {{#each projects as |project|}}
         <section class="organizr-browser-project">
-          <h3><i class="fa-solid fa-folder"></i> {{project.projectName}} <span class="organizr-count">{{project.count}}</span></h3>
+          <h3>
+            <i class="fa-solid fa-folder"></i> {{project.projectName}} <span class="organizr-count">{{project.count}}</span>
+            {{#if project.importableCount}}
+              <button type="button" class="organizr-section-import" data-action="importSection" data-project-id="{{project.projectId}}"
+                      data-tooltip="{{localize "ORGANIZR.Browser.ImportProject" count=project.importableCount}}" {{#if ../batchRunning}}disabled{{/if}}>
+                <i class="fa-solid fa-file-import"></i> {{localize "ORGANIZR.Browser.ImportAll" count=project.importableCount}}
+              </button>
+            {{/if}}
+          </h3>
           {{#each project.types as |group|}}
-            <h4>{{#if group.labelKey}}{{localize group.labelKey}}{{else}}{{group.type}}{{/if}}</h4>
+            <h4>
+              {{#if group.labelKey}}{{localize group.labelKey}}{{else}}{{group.type}}{{/if}}
+              {{#if group.importableCount}}
+                <button type="button" class="organizr-section-import" data-action="importSection" data-project-id="{{project.projectId}}" data-type="{{group.type}}"
+                        data-tooltip="{{localize "ORGANIZR.Browser.ImportGroup" count=group.importableCount}}" {{#if ../../batchRunning}}disabled{{/if}}>
+                  <i class="fa-solid fa-file-import"></i> {{localize "ORGANIZR.Browser.ImportAll" count=group.importableCount}}
+                </button>
+              {{/if}}
+            </h4>
             <ul class="organizr-sheet-rows">
               {{#each group.sheets as |sheet|}}
-                <li class="organizr-sheet-row">
+                <li class="organizr-sheet-row{{#if sheet.inWorld}} in-world{{/if}}">
                   {{#if sheet.imageFileId}}
                     <img class="organizr-sheet-img" alt="" data-file-id="{{sheet.imageFileId}}"{{#if sheet.imageUrl}} src="{{sheet.imageUrl}}"{{/if}}>
                   {{else}}
@@ -28,7 +44,19 @@
                     {{#if sheet.tags.length}}<span class="organizr-sheet-tags">{{#each sheet.tags}}<span class="organizr-tag">{{this}}</span>{{/each}}</span>{{/if}}
                   </span>
                   {{#if (ne sheet.level null)}}<span class="organizr-sheet-level">{{localize "ORGANIZR.Browser.Level" level=sheet.level}}</span>{{/if}}
-                  {{#if sheet.inWorld}}<span class="organizr-sync-state in-world" data-tooltip="{{localize "ORGANIZR.Browser.InWorld"}}"><i class="fa-solid fa-circle-check"></i></span>{{/if}}
+                  <span class="organizr-sync-state{{#if sheet.inWorld}} in-world{{/if}}" data-tooltip="{{#if sheet.inWorld}}{{localize "ORGANIZR.Browser.InWorld"}}{{else}}{{localize "ORGANIZR.Browser.NotInWorld"}}{{/if}}">
+                    <i class="fa-solid {{#if sheet.inWorld}}fa-circle-check{{else}}fa-circle{{/if}}"></i>
+                  </span>
+                  {{#if sheet.importable}}
+                    <button type="button" class="organizr-icon-button" data-action="importSheet" data-file-id="{{sheet.fileId}}"
+                            data-tooltip="{{#if sheet.inWorld}}{{localize "ORGANIZR.Browser.Update"}}{{else}}{{localize "ORGANIZR.Browser.Import"}}{{/if}}"
+                            aria-label="{{#if sheet.inWorld}}{{localize "ORGANIZR.Browser.Update"}}{{else}}{{localize "ORGANIZR.Browser.Import"}}{{/if}}"
+                            {{#if sheet.importing}}disabled{{/if}}>
+                      <i class="fa-solid {{#if sheet.importing}}fa-spinner fa-spin{{else if sheet.inWorld}}fa-rotate{{else}}fa-file-import{{/if}}"></i>
+                    </button>
+                  {{else}}
+                    <span class="organizr-icon-button not-importable" data-tooltip="{{localize "ORGANIZR.Browser.NotImportable"}}"><i class="fa-solid fa-ban"></i></span>
+                  {{/if}}
                 </li>
               {{/each}}
             </ul>

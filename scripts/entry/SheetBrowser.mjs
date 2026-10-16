@@ -1,14 +1,16 @@
-import { filterSheets, groupSheets, listErrorKey } from "../service/SheetCatalog.mjs";
+import { filterSheets, groupSheets, importableFileIds, listErrorKey } from "../service/SheetCatalog.mjs";
+import { importErrorKey } from "../service/SheetImport.mjs";
 import { createImageCache } from "../service/ImageCache.mjs";
 import { readWorldLink } from "../config/ModuleSettings.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
+import { importSheet, linkedWorldDocuments } from "./SheetImport.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const SEARCH_DELAY_MS = 150;
 
 const organizr = createOrganizrClient();
 
-/** Window listing the Organizr sheets the linked token can read, grouped by project and type, with search and lazily streamed portraits. */
+/** Window listing the Organizr sheets the linked token can read, grouped by project and type, with search, lazily streamed portraits and per-sheet import. */
 export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "organizr-sheet-browser",
@@ -16,7 +18,9 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     window: { title: "ORGANIZR.Browser.Title", icon: "fa-solid fa-cloud-arrow-down", resizable: true },
     position: { width: 720, height: 640 },
     actions: {
-      reloadSheets: SheetBrowser.#onReload
+      reloadSheets: SheetBrowser.#onReload,
+      importSheet: SheetBrowser.#onImport,
+      importSection: SheetBrowser.#onImportSection
     }
   };
 
@@ -30,6 +34,8 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   #entries = null;
   #errorKey = null;
   #loading = false;
+  #importing = new Set();
+  #batchRunning = false;
   #term = "";
   #searchTimer = null;
   #observer = null;
@@ -52,6 +58,7 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     context.errorKey = this.#errorKey;
     context.loaded = this.#entries !== null;
     context.total = this.#entries?.length ?? 0;
+    context.batchRunning = this.#batchRunning;
     context.projects = this.#projects();
     return context;
   }
@@ -78,15 +85,17 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #projects() {
     const projects = groupSheets(filterSheets(this.#entries, this.#term));
+    const linked = linkedWorldDocuments();
     for (const project of projects) {
-      for (const type of project.types) type.sheets.forEach((sheet) => this.#decorate(sheet));
+      for (const type of project.types) type.sheets.forEach((sheet) => this.#decorate(sheet, linked));
     }
     return projects;
   }
 
-  #decorate(sheet) {
+  #decorate(sheet, linked) {
     sheet.imageUrl = sheet.imageFileId ? this.#images.cached(sheet.imageFileId) : null;
-    sheet.inWorld = Boolean(sheet.worldActorId && game.actors.get(sheet.worldActorId));
+    sheet.inWorld = linked.has(String(sheet.fileId)) || Boolean(sheet.worldActorId && game.actors.get(sheet.worldActorId));
+    sheet.importing = this.#importing.has(String(sheet.fileId));
   }
 
   async #load() {
@@ -102,6 +111,62 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#loading = false;
       this.render({ parts: ["list"] });
     }
+  }
+
+  async #import(fileId) {
+    this.#importing.add(fileId);
+    this.render({ parts: ["list"] });
+    try {
+      const outcome = await importSheet(fileId);
+      const key = outcome.updated ? "ORGANIZR.Browser.Updated" : "ORGANIZR.Browser.Imported";
+      ui.notifications.info(key, { localize: true, format: { name: outcome.name } });
+      this.#warnAll(outcome);
+    } catch (error) {
+      ui.notifications.error(importErrorKey(error.status ?? -1), { localize: true, format: { message: error.message } });
+    } finally {
+      this.#importing.delete(fileId);
+      this.render({ parts: ["list"] });
+    }
+  }
+
+  async #importMany(fileIds) {
+    const tally = { total: fileIds.length, imported: 0, updated: 0, failed: 0 };
+    this.#batchRunning = true;
+    for (const fileId of fileIds) this.#importing.add(String(fileId));
+    this.render({ parts: ["list"] });
+    try {
+      for (const fileId of fileIds) await this.#importOneOfMany(String(fileId), tally);
+    } finally {
+      for (const fileId of fileIds) this.#importing.delete(String(fileId));
+      this.#batchRunning = false;
+      this.render({ parts: ["list"] });
+    }
+    ui.notifications.info("ORGANIZR.Browser.BatchDone", { localize: true, format: tally });
+  }
+
+  async #importOneOfMany(fileId, tally) {
+    try {
+      const outcome = await importSheet(fileId);
+      if (outcome.updated) tally.updated += 1;
+      else tally.imported += 1;
+      this.#warnAll(outcome);
+    } catch (error) {
+      tally.failed += 1;
+      const name = this.#nameOf(fileId);
+      ui.notifications.error("ORGANIZR.Browser.BatchFailed", { localize: true, format: { name, message: error.message } });
+    } finally {
+      this.#importing.delete(fileId);
+      this.render({ parts: ["list"] });
+    }
+  }
+
+  #warnAll(outcome) {
+    for (const warning of outcome.warnings) ui.notifications.warn(warning, { localize: true, format: { name: outcome.name } });
+  }
+
+  #nameOf(fileId) {
+    const entry = (this.#entries ?? []).find((candidate) => String(candidate.fileId) === fileId);
+    return entry?.name ?? `#${fileId}`;
   }
 
   #wireSearch() {
@@ -138,5 +203,19 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   static #onReload() {
     if (this.#loading) return;
     this.#load();
+  }
+
+  static #onImport(event, target) {
+    const fileId = target.dataset.fileId;
+    if (!game.user.isGM || !fileId || this.#importing.has(fileId)) return;
+    this.#import(fileId);
+  }
+
+  static #onImportSection(event, target) {
+    if (!game.user.isGM || this.#batchRunning) return;
+    const shown = groupSheets(filterSheets(this.#entries, this.#term));
+    const fileIds = importableFileIds(shown, target.dataset.projectId, target.dataset.type || undefined)
+      .filter((fileId) => !this.#importing.has(String(fileId)));
+    if (fileIds.length) this.#importMany(fileIds);
   }
 }

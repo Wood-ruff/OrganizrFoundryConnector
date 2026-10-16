@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { filterSheets, groupSheets, listErrorKey, worldActorId } from "../scripts/service/SheetCatalog.mjs";
+import { filterSheets, groupSheets, importableFileIds, listErrorKey, worldActorId } from "../scripts/service/SheetCatalog.mjs";
 
 const entries = [
   { fileId: 1, projectId: 10, projectName: "Dragonfall", type: "npc", name: "Goblin Warrior", level: "1", imageFileId: 5, uuid: null, tags: ["goblin", "humanoid"], updatedAt: "2026-10-01T00:00:00Z" },
@@ -29,10 +29,22 @@ test("groupSheets nests projects then types in server order with counts and row 
   assert.deepEqual(projects[0].types.map((t) => t.type), ["npc", "spell"]);
   assert.equal(projects[0].types[0].labelKey, "ORGANIZR.Browser.Types.npc");
   assert.deepEqual(projects[0].types[0].sheets[0], {
-    fileId: 1, name: "Goblin Warrior", level: "1", imageFileId: 5, tags: ["goblin", "humanoid"],
-    worldActorId: null, updatedAt: "2026-10-01T00:00:00Z"
+    fileId: 1, type: "npc", importable: true, name: "Goblin Warrior", level: "1", imageFileId: 5,
+    tags: ["goblin", "humanoid"], worldActorId: null, updatedAt: "2026-10-01T00:00:00Z"
   });
   assert.equal(projects[1].types[0].sheets[0].worldActorId, "Ab12Cd34Ef56Gh78");
+  assert.equal(projects[1].types[0].sheets[0].importable, false);
+});
+
+test("groups and projects count their importable sheets and expose their file ids", () => {
+  const projects = groupSheets(entries);
+  assert.equal(projects[0].importableCount, 3);
+  assert.deepEqual(projects[0].types.map((t) => t.importableCount), [2, 1]);
+  assert.equal(projects[1].importableCount, 0);
+  assert.deepEqual(importableFileIds(projects, 10), [1, 2, 3]);
+  assert.deepEqual(importableFileIds(projects, "10", "npc"), [1, 2]);
+  assert.deepEqual(importableFileIds(projects, 20), []);
+  assert.deepEqual(importableFileIds(projects, 99), []);
 });
 
 test("unknown types get no label key and missing fields default safely", () => {

@@ -1,12 +1,24 @@
 import { characterExport } from "./CharacterExport.mjs";
+import { MODULE_ID } from "../config/ModuleId.mjs";
 
-/** The request body for the Organizr character endpoint: the export plus the Foundry uuids. */
+/**
+ * The request body for the Organizr character endpoint: the export plus the Foundry uuids and,
+ * when the actor is already known to Organizr, the file it belongs to.
+ */
 export function syncBody(actor, world) {
   const data = characterExport(actor, world);
   const itemUuids = itemUuidsOf(actor);
   data.uuid = actor.uuid;
   data.items = (data.items ?? []).map((item, index) => withUuid(item, itemUuids, index));
+  const fileId = knownFileId(actor);
+  if (fileId !== null) data.organizr = { fileId };
   return data;
+}
+
+/** The Organizr file this actor was imported from or last pushed to, or null. */
+export function knownFileId(actor) {
+  const flags = actor.flags?.[MODULE_ID] ?? {};
+  return flags.sheet?.fileId ?? flags.sync?.characterFileId ?? null;
 }
 
 /** What the module remembers on the actor after a successful push. */

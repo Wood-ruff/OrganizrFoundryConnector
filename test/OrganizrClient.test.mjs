@@ -92,3 +92,28 @@ test("a rejected file request surfaces the status", async () => {
   const client = createOrganizrClient(fakeFetch(403, { error: "Not your project" }, []));
   await assert.rejects(client.fetchFileBlob(link, 77), { status: 403, message: "Not your project" });
 });
+
+test("fetchFoundryDocument gets the sheet's Foundry document for the world's system", async () => {
+  const calls = [];
+  const client = createOrganizrClient(fakeFetch(200, { name: "Goblin", type: "npc" }, calls));
+  const document = await client.fetchFoundryDocument(link, 5, "pf2e");
+  assert.deepEqual(document, { name: "Goblin", type: "npc" });
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/sheets/5/foundry?system=pf2e");
+  assert.equal(calls[0].init.method, "GET");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer org_secret");
+});
+
+test("a 422 from the document endpoint carries the server's reason", async () => {
+  const client = createOrganizrClient(fakeFetch(422, { error: "\"Guard.npc\" is a dnd5e sheet; this world runs pf2e" }, []));
+  await assert.rejects(client.fetchFoundryDocument(link, 5, "pf2e"), { status: 422, message: "\"Guard.npc\" is a dnd5e sheet; this world runs pf2e" });
+});
+
+test("linkSheet posts the Foundry uuid to the sheet's link path", async () => {
+  const calls = [];
+  const client = createOrganizrClient(fakeFetch(200, { fileId: 5, uuid: "Actor.Ab12" }, calls));
+  const result = await client.linkSheet(link, 5, { uuid: "Actor.Ab12", worldId: "w" });
+  assert.deepEqual(result, { fileId: 5, uuid: "Actor.Ab12" });
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/sheets/5/link");
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[0].init.body, '{"uuid":"Actor.Ab12","worldId":"w"}');
+});

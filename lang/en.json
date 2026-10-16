@@ -21,6 +21,7 @@
       "NeverSynced": "Not synced yet",
       "SyncCreated": "{name} was created in Organizr ({created} sheets created, {updated} updated).",
       "SyncUpdated": "{name} was updated in Organizr ({created} sheets created, {updated} updated).",
+      "SyncNote": "{name}: {note}",
       "Errors": {
         "NotLinked": "Link this world to an Organizr project first (server URL, project and API token).",
         "Unreachable": "{name}: the Organizr server did not answer ({message}).",
@@ -43,7 +44,20 @@
       "Empty": "The token can read no sheets.",
       "NoMatch": "No sheet matches the search.",
       "InWorld": "Already in this world",
+      "NotInWorld": "Not in this world",
       "Level": "Lv {level}",
+      "Import": "Import into this world",
+      "Update": "Update the copy in this world",
+      "NotImportable": "This sheet kind has no Foundry import",
+      "Imported": "{name} was imported into this world.",
+      "Updated": "{name} was updated from Organizr.",
+      "PortraitFailed": "{name}: the portrait could not be stored in Foundry; the sheet was imported without it.",
+      "LinkFailed": "{name} was imported, but Organizr could not record the link. Import again later to retry.",
+      "ImportAll": "Import all ({count})",
+      "ImportGroup": "Import every sheet of this kind shown here ({count}); copies already in the world are updated",
+      "ImportProject": "Import every importable sheet of this project shown here ({count}); copies already in the world are updated",
+      "BatchDone": "{imported} imported, {updated} updated, {failed} failed ({total} sheets).",
+      "BatchFailed": "{name}: {message}",
       "Types": {
         "character": "Player characters",
         "npc": "NPCs",
@@ -57,7 +71,10 @@
         "Unreachable": "The Organizr server did not answer.",
         "TokenRejected": "The API token was rejected. It may be expired or revoked.",
         "Forbidden": "The API token is not allowed to list these sheets.",
-        "ServerError": "Organizr could not list the sheets."
+        "ServerError": "Organizr could not list the sheets.",
+        "SheetMissing": "The sheet no longer exists in Organizr.",
+        "ImportRefused": "Organizr could not export the sheet: {message}",
+        "UnknownType": "This world's system has no document type \"{type}\"."
       }
     },
     "Settings": {

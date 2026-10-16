@@ -23,6 +23,19 @@ export function createOrganizrClient(fetchImpl = globalThis.fetch) {
       return readJson(response);
     },
 
+    async fetchFoundryDocument({ serverUrl, apiToken }, fileId, systemId) {
+      const query = systemId ? `?system=${encodeURIComponent(systemId)}` : "";
+      const url = `${serverUrl}/api/foundry/sheets/${encodeURIComponent(fileId)}/foundry${query}`;
+      const response = await send(fetchImpl, url, apiToken, { method: "GET" });
+      return readJson(response);
+    },
+
+    async linkSheet({ serverUrl, apiToken }, fileId, body) {
+      const url = `${serverUrl}/api/foundry/sheets/${encodeURIComponent(fileId)}/link`;
+      const response = await send(fetchImpl, url, apiToken, { method: "POST", body });
+      return readJson(response);
+    },
+
     async fetchFileBlob({ serverUrl, apiToken }, fileId) {
       const url = `${serverUrl}/api/foundry/files/${encodeURIComponent(fileId)}/content`;
       const response = await send(fetchImpl, url, apiToken, { method: "GET" });
