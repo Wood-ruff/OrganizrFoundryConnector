@@ -1,0 +1,10 @@
+<div class="organizr-inspector-body">
+  {{#if missing}}
+    <p class="organizr-hint">{{localize "ORGANIZR.Inspector.Missing"}}</p>
+  {{else}}
+    <div class="organizr-inspector-toolbar">
+      <button type="button" data-action="copyJson"><i class="fa-solid fa-copy"></i> {{localize "ORGANIZR.Inspector.Copy"}}</button>
+    </div>
+    <pre class="organizr-json">{{json}}</pre>
+  {{/if}}
+</div>

@@ -1,30 +1,37 @@
-<section class="organizr-section organizr-combat">
+<section class="organizr-section organizr-combat{{#if combatCollapsed}} collapsed{{/if}}">
   <header class="organizr-section-header">
-    <h3>{{localize "ORGANIZR.Combat.Title"}}</h3>
+    <button type="button" class="organizr-section-toggle" data-action="toggleSection" data-section="combat"
+            aria-expanded="{{#if combatCollapsed}}false{{else}}true{{/if}}">
+      <i class="fa-solid {{#if combatCollapsed}}fa-caret-right{{else}}fa-caret-down{{/if}}"></i>
+      <h3>{{localize "ORGANIZR.Combat.Title"}}</h3>
+    </button>
     {{#if combat.started}}
       <span class="organizr-round">{{localize "ORGANIZR.Combat.Round" round=combat.round}}</span>
     {{/if}}
   </header>
 
-  {{#if combat.exists}}
-    {{#unless combat.started}}
-      <p class="organizr-hint">{{localize "ORGANIZR.Combat.NotStarted"}}</p>
-    {{/unless}}
-    {{#if combat.combatants.length}}
-      <ol class="organizr-combatants">
-        {{#each combat.combatants as |c|}}
-          <li class="organizr-combatant{{#if c.isCurrent}} current{{/if}}{{#if c.isDefeated}} defeated{{/if}}{{#if c.isHidden}} hidden-combatant{{/if}}"
-              data-combatant-id="{{c.id}}">
-            <img class="organizr-combatant-img" src="{{c.img}}" alt="">
-            <span class="organizr-combatant-name">{{c.name}}</span>
-            <span class="organizr-combatant-initiative">{{#if (ne c.initiative null)}}{{c.initiative}}{{else}}-{{/if}}</span>
-          </li>
-        {{/each}}
-      </ol>
+  <div class="organizr-section-body">
+    {{#if combat.exists}}
+      {{#unless combat.started}}
+        <p class="organizr-hint">{{localize "ORGANIZR.Combat.NotStarted"}}</p>
+      {{/unless}}
+      {{#if combat.combatants.length}}
+        <ol class="organizr-combatants">
+          {{#each combat.combatants as |c|}}
+            <li class="organizr-combatant{{#if c.isCurrent}} current{{/if}}{{#if c.isDefeated}} defeated{{/if}}{{#if c.isHidden}} hidden-combatant{{/if}}"
+                data-action="inspectCombatant" data-combatant-id="{{c.id}}" role="button" tabindex="0"
+                data-tooltip="{{localize "ORGANIZR.Combat.InspectTooltip"}}">
+              <img class="organizr-combatant-img" src="{{c.img}}" alt="">
+              <span class="organizr-combatant-name">{{c.name}}</span>
+              <span class="organizr-combatant-initiative">{{#if (ne c.initiative null)}}{{c.initiative}}{{else}}-{{/if}}</span>
+            </li>
+          {{/each}}
+        </ol>
+      {{else}}
+        <p class="organizr-hint">{{localize "ORGANIZR.Combat.NoCombatants"}}</p>
+      {{/if}}
     {{else}}
-      <p class="organizr-hint">{{localize "ORGANIZR.Combat.NoCombatants"}}</p>
+      <p class="organizr-hint">{{localize "ORGANIZR.Combat.None"}}</p>
     {{/if}}
-  {{else}}
-    <p class="organizr-hint">{{localize "ORGANIZR.Combat.None"}}</p>
-  {{/if}}
+  </div>
 </section>

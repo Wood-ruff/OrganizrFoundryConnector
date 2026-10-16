@@ -6,7 +6,31 @@
       "Round": "Round {round}",
       "None": "No combat is running.",
       "NotStarted": "Combat has not started yet.",
-      "NoCombatants": "No combatants yet."
+      "NoCombatants": "No combatants yet.",
+      "InspectTooltip": "Show live data"
+    },
+    "Settings": {
+      "Title": "World link",
+      "Hint": "Links the world \"{world}\" to an Organizr project. Stored with the world.",
+      "Linked": "Linked",
+      "NotLinked": "Not linked",
+      "ServerUrl": "Organizr server URL",
+      "ApiToken": "API token",
+      "TokenPlaceholder": "Paste a token",
+      "ProjectId": "Project",
+      "Save": "Save",
+      "Clear": "Unlink",
+      "Saved": "Organizr world link saved.",
+      "Errors": {
+        "InvalidUrl": "The server URL must start with http:// or https://.",
+        "TokenWithoutUrl": "A token needs a server URL."
+      }
+    },
+    "Inspector": {
+      "Title": "Combatant data",
+      "Copy": "Copy JSON",
+      "Copied": "Combatant JSON copied to the clipboard.",
+      "Missing": "This combatant is no longer part of a combat."
     }
   }
 }

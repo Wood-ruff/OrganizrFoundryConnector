@@ -1,4 +1,5 @@
 import { OrganizrSidebarTab } from "./entry/OrganizrSidebarTab.mjs";
+import { registerModuleSettings } from "./config/ModuleSettings.mjs";
 
 const TAB_ID = OrganizrSidebarTab.tabName;
 
@@ -8,7 +9,11 @@ const COMBAT_HOOKS = [
   "combatTurnChange", "canvasReady"
 ];
 
-Hooks.once("init", registerSidebarTab);
+Hooks.once("init", () => {
+  registerModuleSettings();
+  registerSidebarTab();
+});
+
 Hooks.once("ready", () => {
   for (const hook of COMBAT_HOOKS) Hooks.on(hook, rerenderTab);
 });
@@ -19,7 +24,7 @@ function registerSidebarTab() {
 }
 
 function tabsWithOrganizrBeforeSettings(tabs) {
-  const descriptor = { tooltip: "ORGANIZR.Tab.Title", icon: "fa-solid fa-book-open-reader" };
+  const descriptor = { tooltip: "ORGANIZR.Tab.Title", icon: "fa-solid fa-book-open-reader", gmOnly: true };
   const result = {};
   for (const [id, config] of Object.entries(tabs)) {
     if (id === "settings") result[TAB_ID] = descriptor;
@@ -32,6 +37,6 @@ function tabsWithOrganizrBeforeSettings(tabs) {
 function rerenderTab() {
   const tab = ui[TAB_ID];
   if (!tab?.rendered) return;
-  tab.render();
-  tab.popout?.render();
+  tab.render({ parts: ["combat"] });
+  tab.popout?.render({ parts: ["combat"] });
 }

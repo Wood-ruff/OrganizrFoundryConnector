@@ -4,20 +4,44 @@
 
 .organizr-section-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--color-border-light-primary, #7a7971);
   margin-bottom: 0.5rem;
 }
 
-.organizr-section-header h3 {
+.organizr-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1 1 auto;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  height: auto;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.organizr-section-toggle h3 {
   margin: 0;
   border: none;
 }
 
-.organizr-round {
+.organizr-section.collapsed .organizr-section-body {
+  display: none;
+}
+
+.organizr-round,
+.organizr-link-state {
   font-size: var(--font-size-12, 0.75rem);
   opacity: 0.8;
+}
+
+.organizr-link-state.linked {
+  color: var(--color-level-success, #4caf50);
 }
 
 .organizr-hint {
@@ -37,6 +61,11 @@
   gap: 0.5rem;
   padding: 0.25rem;
   border-radius: 4px;
+  cursor: pointer;
+}
+
+.organizr-combatant:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .organizr-combatant.current {
@@ -73,4 +102,40 @@
   min-width: 2ch;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.organizr-link-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.organizr-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.organizr-inspector-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.organizr-inspector-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.organizr-json {
+  flex: 1 1 auto;
+  margin: 0;
+  overflow: auto;
+  font-size: var(--font-size-12, 0.75rem);
+  line-height: 1.35;
+  white-space: pre;
+  user-select: text;
 }

@@ -1,0 +1,38 @@
+{{#if isGM}}
+<section class="organizr-section organizr-settings{{#if settingsCollapsed}} collapsed{{/if}}">
+  <header class="organizr-section-header">
+    <button type="button" class="organizr-section-toggle" data-action="toggleSection" data-section="settings"
+            aria-expanded="{{#if settingsCollapsed}}false{{else}}true{{/if}}">
+      <i class="fa-solid {{#if settingsCollapsed}}fa-caret-right{{else}}fa-caret-down{{/if}}"></i>
+      <h3>{{localize "ORGANIZR.Settings.Title"}}</h3>
+    </button>
+    <span class="organizr-link-state {{#if link.linked}}linked{{else}}unlinked{{/if}}">
+      {{#if link.linked}}{{localize "ORGANIZR.Settings.Linked"}}{{else}}{{localize "ORGANIZR.Settings.NotLinked"}}{{/if}}
+    </span>
+  </header>
+
+  <div class="organizr-section-body">
+    <p class="organizr-hint">{{localize "ORGANIZR.Settings.Hint" world=link.worldTitle}}</p>
+    <form class="organizr-link-form" autocomplete="off">
+      <div class="form-group">
+        <label for="organizr-server-url">{{localize "ORGANIZR.Settings.ServerUrl"}}</label>
+        <input type="url" id="organizr-server-url" name="serverUrl" value="{{link.serverUrl}}" placeholder="https://organizr.example">
+      </div>
+      <div class="form-group">
+        <label for="organizr-api-token">{{localize "ORGANIZR.Settings.ApiToken"}}</label>
+        <input type="password" id="organizr-api-token" name="apiToken" value="" placeholder="{{#if link.hasToken}}{{link.maskedToken}}{{else}}{{localize "ORGANIZR.Settings.TokenPlaceholder"}}{{/if}}">
+      </div>
+      <div class="form-group">
+        <label for="organizr-project-id">{{localize "ORGANIZR.Settings.ProjectId"}}</label>
+        <input type="text" id="organizr-project-id" name="projectId" value="{{link.projectId}}">
+      </div>
+      <div class="organizr-form-actions">
+        <button type="button" data-action="saveWorldLink"><i class="fa-solid fa-floppy-disk"></i> {{localize "ORGANIZR.Settings.Save"}}</button>
+        {{#if link.linked}}
+          <button type="button" data-action="clearWorldLink"><i class="fa-solid fa-link-slash"></i> {{localize "ORGANIZR.Settings.Clear"}}</button>
+        {{/if}}
+      </div>
+    </form>
+  </div>
+</section>
+{{/if}}
