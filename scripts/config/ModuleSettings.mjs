@@ -1,4 +1,6 @@
-export const MODULE_ID = "organizr-foundry-connector";
+import { MODULE_ID } from "./ModuleId.mjs";
+
+export { MODULE_ID };
 
 export const SETTINGS = {
   serverUrl: "serverUrl",

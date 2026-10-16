@@ -40,3 +40,12 @@ test("missing ownership or users do not break the rows", () => {
   assert.equal(rows.length, 1);
   assert.deepEqual(rows[0].owners, []);
 });
+
+test("sync state comes from the module flag on the actor", () => {
+  const flagged = actor({ flags: { "organizr-foundry-connector": { sync: { characterFileId: 7, syncedAt: "2026-10-16T12:00:00Z" } } } });
+  const rows = characterRows([flagged, actor({ id: "b", name: "Plain" })], users);
+  assert.equal(rows[0].synced, true);
+  assert.equal(rows[0].syncedAt, "2026-10-16T12:00:00Z");
+  assert.equal(rows[1].synced, false);
+  assert.equal(rows[1].syncedAt, null);
+});

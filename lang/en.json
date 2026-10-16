@@ -13,10 +13,22 @@
       "Title": "Player characters",
       "None": "No player characters in this world.",
       "NoOwner": "no player owner",
+      "NotLinkedHint": "Link this world to an Organizr project below to enable syncing.",
       "Preview": "Preview sync JSON",
       "PreviewTitle": "Sync payload",
       "Sync": "Sync to Organizr",
-      "SyncNotWired": "Sending to Organizr is not connected yet; showing the payload instead."
+      "SyncedAt": "Last synced {at}",
+      "NeverSynced": "Not synced yet",
+      "SyncCreated": "{name} was created in Organizr ({created} sheets created, {updated} updated).",
+      "SyncUpdated": "{name} was updated in Organizr ({created} sheets created, {updated} updated).",
+      "Errors": {
+        "NotLinked": "Link this world to an Organizr project first (server URL, project and API token).",
+        "Unreachable": "{name}: the Organizr server did not answer ({message}).",
+        "TokenRejected": "{name}: the API token was rejected. It may be expired or revoked.",
+        "WrongProject": "{name}: the API token is not allowed to use this project.",
+        "ProjectNotFound": "{name}: the project does not exist on the Organizr server.",
+        "ServerError": "{name}: Organizr refused the sync: {message}"
+      }
     },
     "Settings": {
       "Title": "World link",
@@ -24,15 +36,18 @@
       "Linked": "Linked",
       "NotLinked": "Not linked",
       "ServerUrl": "Organizr server URL",
+      "ProjectId": "Project id",
+      "ProjectIdPlaceholder": "e.g. 12",
       "ApiToken": "API token",
       "TokenPlaceholder": "Paste a token",
-      "ProjectId": "Project",
+      "TokenHint": "Create one on your Organizr profile page under \"API tokens\"; it starts with org_.",
       "Save": "Save",
       "Clear": "Unlink",
       "Saved": "Organizr world link saved.",
       "Errors": {
         "InvalidUrl": "The server URL must start with http:// or https://.",
-        "TokenWithoutUrl": "A token needs a server URL."
+        "InvalidProjectId": "The project id must be a number.",
+        "InvalidToken": "The API token must start with org_."
       }
     },
     "Inspector": {

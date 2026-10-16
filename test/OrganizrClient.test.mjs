@@ -1,0 +1,60 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { createOrganizrClient, OrganizrRequestError } from "../scripts/client/OrganizrClient.mjs";
+
+const link = { serverUrl: "https://organizr.example", apiToken: "org_secret", projectId: "12" };
+
+function fakeFetch(status, payload, calls) {
+  return async (url, init) => {
+    calls.push({ url, init });
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => {
+        if (payload === undefined) throw new Error("no body");
+        return payload;
+      }
+    };
+  };
+}
+
+test("pushCharacter posts the body as JSON with the bearer token to the project path", async () => {
+  const calls = [];
+  const client = createOrganizrClient(fakeFetch(200, { characterFileId: 1, synced: false }, calls));
+
+  const result = await client.pushCharacter(link, { name: "Mara", uuid: "Actor.A1" });
+
+  assert.deepEqual(result, { characterFileId: 1, synced: false });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/projects/12/characters");
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer org_secret");
+  assert.equal(calls[0].init.headers["Content-Type"], "application/json");
+  assert.equal(calls[0].init.body, '{"name":"Mara","uuid":"Actor.A1"}');
+});
+
+test("an optional folder id becomes a query parameter", async () => {
+  const calls = [];
+  await createOrganizrClient(fakeFetch(200, {}, calls)).pushCharacter(link, {}, 44);
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/projects/12/characters?folderId=44");
+});
+
+test("server errors surface status and the server's message", async () => {
+  const client = createOrganizrClient(fakeFetch(400, { error: "A character needs a uuid" }, []));
+  await assert.rejects(client.pushCharacter(link, {}), (error) => {
+    assert.ok(error instanceof OrganizrRequestError);
+    assert.equal(error.status, 400);
+    assert.equal(error.message, "A character needs a uuid");
+    return true;
+  });
+});
+
+test("errors without a JSON body fall back to the HTTP status", async () => {
+  const client = createOrganizrClient(fakeFetch(401, undefined, []));
+  await assert.rejects(client.pushCharacter(link, {}), { status: 401, message: "HTTP 401" });
+});
+
+test("a network failure is status 0 with the fetch message", async () => {
+  const client = createOrganizrClient(async () => { throw new TypeError("Failed to fetch"); });
+  await assert.rejects(client.pushCharacter(link, {}), { status: 0, message: "Failed to fetch" });
+});

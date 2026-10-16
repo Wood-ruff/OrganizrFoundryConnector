@@ -1,14 +1,18 @@
 import { combatOverview } from "../service/CombatOverview.mjs";
 import { characterRows } from "../service/CharacterList.mjs";
+import { syncBody, syncErrorKey, syncFlag, syncOutcome } from "../service/CharacterSync.mjs";
 import { isWorldLinked, maskToken, normalizeWorldLink } from "../service/WorldLink.mjs";
 import { isCollapsed, toggleSection } from "../service/SectionState.mjs";
-import { readCollapsedSections, readWorldLink, writeCollapsedSections, writeWorldLink } from "../config/ModuleSettings.mjs";
-import { userRows } from "../config/WorldInfo.mjs";
+import { MODULE_ID, readCollapsedSections, readWorldLink, writeCollapsedSections, writeWorldLink } from "../config/ModuleSettings.mjs";
+import { userRows, worldInfo } from "../config/WorldInfo.mjs";
+import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { CombatantInspector } from "./CombatantInspector.mjs";
 import { CharacterExportPreview } from "./CharacterExportPreview.mjs";
 
 const { AbstractSidebarTab } = foundry.applications.sidebar;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
+
+const organizr = createOrganizrClient();
 
 /** Sidebar tab hosting the Organizr tools: combat overview, player characters and the per-world link. */
 export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSidebarTab) {
@@ -39,6 +43,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     context.isGM = game.user.isGM;
     context.combat = combatOverview(game.combat, game.user);
     context.characters = characterRows(game.actors.contents, userRows());
+    context.linked = isWorldLinked(link);
     context.combatCollapsed = isCollapsed(collapsed, "combat");
     context.charactersCollapsed = isCollapsed(collapsed, "characters");
     context.settingsCollapsed = isCollapsed(collapsed, "settings");
@@ -62,11 +67,20 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     if (actor) CharacterExportPreview.show(actor);
   }
 
-  static #onSyncCharacter(event, target) {
+  static async #onSyncCharacter(event, target) {
     const actor = game.actors.get(target.dataset.actorId);
-    if (!actor) return;
-    ui.notifications.warn(game.i18n.localize("ORGANIZR.Characters.SyncNotWired"));
-    CharacterExportPreview.show(actor);
+    const link = readWorldLink();
+    if (!actor || !game.user.isGM) return;
+    if (!isWorldLinked(link)) {
+      ui.notifications.warn(game.i18n.localize("ORGANIZR.Characters.Errors.NotLinked"));
+      return;
+    }
+    target.disabled = true;
+    try {
+      await pushCharacter(actor, link);
+    } finally {
+      this.render({ parts: ["characters"] });
+    }
   }
 
   static async #onSaveWorldLink(event, target) {
@@ -86,6 +100,21 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     await writeWorldLink({ serverUrl: "", apiToken: "", projectId: "" });
     this.render();
   }
+}
+
+async function pushCharacter(actor, link) {
+  let result;
+  try {
+    result = await organizr.pushCharacter(link, syncBody(actor, worldInfo()));
+  } catch (error) {
+    const key = syncErrorKey(error.status ?? -1);
+    ui.notifications.error(game.i18n.format(key, { name: actor.name, message: error.message }));
+    return;
+  }
+  await actor.setFlag(MODULE_ID, "sync", syncFlag(result, link, new Date().toISOString()));
+  const outcome = syncOutcome(result);
+  ui.notifications.info(game.i18n.format(outcome.key, { name: actor.name, ...outcome.data }));
+  for (const note of outcome.notes) ui.notifications.warn(`${actor.name}: ${note}`);
 }
 
 function linkContext(link) {

@@ -9,21 +9,28 @@
   </header>
 
   <div class="organizr-section-body">
+    {{#unless linked}}
+      <p class="organizr-hint">{{localize "ORGANIZR.Characters.NotLinkedHint"}}</p>
+    {{/unless}}
     {{#if characters.length}}
       <ul class="organizr-characters-list">
         {{#each characters as |ch|}}
-          <li class="organizr-character" data-actor-id="{{ch.id}}">
+          <li class="organizr-character{{#if ch.synced}} synced{{/if}}" data-actor-id="{{ch.id}}">
             <img class="organizr-character-img" src="{{ch.img}}" alt="">
             <span class="organizr-character-text">
               <span class="organizr-character-name">{{ch.name}}</span>
               <span class="organizr-character-owners">{{#if ch.hasPlayerOwner}}{{ch.ownersLabel}}{{else}}{{localize "ORGANIZR.Characters.NoOwner"}}{{/if}}</span>
+            </span>
+            <span class="organizr-sync-state" data-tooltip="{{#if ch.synced}}{{localize "ORGANIZR.Characters.SyncedAt" at=ch.syncedAt}}{{else}}{{localize "ORGANIZR.Characters.NeverSynced"}}{{/if}}">
+              <i class="fa-solid {{#if ch.synced}}fa-circle-check{{else}}fa-circle{{/if}}"></i>
             </span>
             <button type="button" class="organizr-icon-button" data-action="previewCharacter" data-actor-id="{{ch.id}}"
                     data-tooltip="{{localize "ORGANIZR.Characters.Preview"}}" aria-label="{{localize "ORGANIZR.Characters.Preview"}}">
               <i class="fa-solid fa-code"></i>
             </button>
             <button type="button" class="organizr-icon-button" data-action="syncCharacter" data-actor-id="{{ch.id}}"
-                    data-tooltip="{{localize "ORGANIZR.Characters.Sync"}}" aria-label="{{localize "ORGANIZR.Characters.Sync"}}">
+                    data-tooltip="{{localize "ORGANIZR.Characters.Sync"}}" aria-label="{{localize "ORGANIZR.Characters.Sync"}}"
+                    {{#unless ../linked}}disabled{{/unless}}>
               <i class="fa-solid fa-cloud-arrow-up"></i>
             </button>
           </li>

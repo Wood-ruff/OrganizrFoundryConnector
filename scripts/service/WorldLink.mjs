@@ -1,3 +1,5 @@
+const TOKEN_PREFIX = "org_";
+
 /**
  * Normalizes and validates the per-world Organizr link form; returns { link, errors }.
  * A blank token field keeps the token already stored, so edits to the other fields never wipe it.
@@ -12,16 +14,16 @@ export function normalizeWorldLink(input, existingToken = "") {
   return { link, errors: validationErrors(link) };
 }
 
-/** True when the world has enough data to talk to a server. */
+/** True when the world has everything a push needs: server, project and token. */
 export function isWorldLinked(link) {
-  return Boolean(link.serverUrl) && Boolean(link.apiToken);
+  return Boolean(link.serverUrl) && Boolean(link.projectId) && Boolean(link.apiToken);
 }
 
-/** Masks a token for display, keeping only its last characters. */
+/** Masks a token for display, keeping its prefix and last characters. */
 export function maskToken(token) {
   if (!token) return "";
-  if (token.length <= 4) return "****";
-  return "****" + token.slice(-4);
+  if (token.length <= 8) return "****";
+  return token.slice(0, 4) + "****" + token.slice(-4);
 }
 
 function trimmedWithoutTrailingSlash(value) {
@@ -31,14 +33,17 @@ function trimmedWithoutTrailingSlash(value) {
 function validationErrors(link) {
   const errors = [];
   if (link.serverUrl && !isHttpUrl(link.serverUrl)) errors.push("ORGANIZR.Settings.Errors.InvalidUrl");
-  if (link.apiToken && !link.serverUrl) errors.push("ORGANIZR.Settings.Errors.TokenWithoutUrl");
+  if (link.projectId && !/^\d+$/.test(link.projectId)) errors.push("ORGANIZR.Settings.Errors.InvalidProjectId");
+  if (link.apiToken && !link.apiToken.startsWith(TOKEN_PREFIX)) errors.push("ORGANIZR.Settings.Errors.InvalidToken");
   return errors;
 }
 
 function isHttpUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    const isHttp = url.protocol === "http:" || url.protocol === "https:";
+    const isPlain = !url.search && !url.hash && !url.username && !url.password;
+    return isHttp && isPlain;
   } catch {
     return false;
   }
