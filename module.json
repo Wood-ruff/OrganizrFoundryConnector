@@ -14,5 +14,7 @@
     { "lang": "en", "name": "English", "path": "lang/en.json" }
   ],
   "url": "https://github.com/Wood-ruff/OrganizrFoundryConnector",
+  "manifest": "https://raw.githubusercontent.com/Wood-ruff/OrganizrFoundryConnector/main/module.json",
+  "download": "https://github.com/Wood-ruff/OrganizrFoundryConnector/archive/refs/heads/main.zip",
   "license": "LICENSE"
 }
