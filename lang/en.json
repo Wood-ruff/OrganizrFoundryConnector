@@ -1,0 +1,12 @@
+{
+  "ORGANIZR": {
+    "Tab": { "Title": "Organizr" },
+    "Combat": {
+      "Title": "Combat",
+      "Round": "Round {round}",
+      "None": "No combat is running.",
+      "NotStarted": "Combat has not started yet.",
+      "NoCombatants": "No combatants yet."
+    }
+  }
+}

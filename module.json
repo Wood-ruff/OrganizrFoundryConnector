@@ -1,0 +1,18 @@
+{
+  "id": "organizr-foundry-connector",
+  "title": "Organizr Connector",
+  "description": "Connects a live Foundry VTT session to an Organizr campaign workspace.",
+  "version": "0.1.0",
+  "authors": [{ "name": "Wood-ruff" }],
+  "compatibility": {
+    "minimum": "13.341",
+    "verified": "14"
+  },
+  "esmodules": ["scripts/organizr-connector.mjs"],
+  "styles": ["styles/organizr-connector.css"],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" }
+  ],
+  "url": "https://github.com/Wood-ruff/OrganizrFoundryConnector",
+  "license": "LICENSE"
+}

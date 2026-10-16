@@ -1,0 +1,17 @@
+# Claude-related files - never committed
+CLAUDE.md
+.claude/
+*.plan.md
+
+# Session knowledge folder - untracked by design
+docs/
+
+# User-provided test data drop folder
+testdata/
+
+# IDE workspace settings (machine-specific)
+.vscode/
+
+# Dependencies and logs
+node_modules/
+*.log
