@@ -10,7 +10,8 @@ function pf2eActor() {
     flags: { "organizr-foundry-connector": { sheet: { fileId: 5 } } },
     level: 1, alliance: "opposition",
     hitPoints: { value: 4, max: 15, temp: 0, unrecoverable: 0, negativeHealing: false },
-    system: { attributes: { hp: { value: 4, max: 15 }, ac: { value: 16 } }, details: { level: { value: 1 } } },
+    system: { attributes: { hp: { value: 4, max: 15 }, ac: { value: 16 }, speed: { value: 25, total: 25 } }, details: { level: { value: 1 } } },
+    saves: { fortitude: { mod: 7 }, reflex: { mod: 5 }, will: { mod: 3 } },
     statuses: new Set(["frightened"]),
     conditions: { active: [{ slug: "frightened", name: "Frightened", value: 1 }] },
     itemTypes: { effect: [{ id: "e1", name: "Effect: Bless", img: "b.webp", slug: "effect-bless", badge: { value: 2 }, system: { duration: { value: 1, unit: "minutes" } } }] },
@@ -22,7 +23,11 @@ function pf2eActor() {
 function plainActor() {
   return {
     id: "A2", uuid: "Actor.A2", type: "character", name: "Mara", flags: {},
-    system: { attributes: { hp: { value: 30, max: 32, temp: 5 }, ac: { value: 18 } }, details: { level: { value: 3 } } },
+    system: {
+      attributes: { hp: { value: 30, max: 32, temp: 5 }, ac: { value: 18 }, movement: { walk: 30 } },
+      abilities: { con: { save: 4 }, dex: { save: { value: 6 } }, wis: { save: "n/a" } },
+      details: { level: { value: 3 } }
+    },
     statuses: new Set(),
     effects: { contents: [{ id: "ae1", name: "Blessed", img: "x.webp", disabled: false, duration: { toObject: () => ({ rounds: 10 }) } }] }
   };
@@ -73,6 +78,8 @@ test("combatants carry turn order, token and the live actor state in both pf2e a
   assert.equal(goblin.actor.organizrFileId, 5);
   assert.deepEqual(goblin.actor.hp, { value: 4, max: 15, temp: 0, unrecoverable: 0 });
   assert.equal(goblin.actor.ac, 16);
+  assert.equal(goblin.actor.speed, 25);
+  assert.deepEqual(goblin.actor.saves, { fortitude: 7, reflex: 5, will: 3 });
   assert.deepEqual(goblin.actor.statuses, ["frightened"]);
   assert.deepEqual(goblin.actor.conditions, [{ slug: "frightened", name: "Frightened", value: 1 }]);
   assert.deepEqual(goblin.actor.effects, [{ kind: "effect", id: "e1", name: "Effect: Bless", img: "b.webp", slug: "effect-bless", badge: 2, duration: { value: 1, unit: "minutes" } }]);
@@ -84,6 +91,8 @@ test("combatants carry turn order, token and the live actor state in both pf2e a
   assert.equal(mara.actor.organizrFileId, null);
   assert.equal(mara.actor.level, 3);
   assert.deepEqual(mara.actor.hp, { value: 30, max: 32, temp: 5, unrecoverable: 0 });
+  assert.equal(mara.actor.speed, 30);
+  assert.deepEqual(mara.actor.saves, { fortitude: 4, reflex: 6, will: null });
   assert.deepEqual(mara.actor.conditions, []);
   assert.deepEqual(mara.actor.effects, [{ kind: "activeEffect", id: "ae1", name: "Blessed", img: "x.webp", disabled: false, duration: { rounds: 10 } }]);
   assert.deepEqual(mara.actor.traits, []);

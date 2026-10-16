@@ -160,6 +160,8 @@ function actorEntry(actor) {
     alliance: actor.alliance ?? null,
     hp: hpOf(actor, system),
     ac: system.attributes?.ac?.value ?? null,
+    speed: speedOf(system),
+    saves: savesOf(actor, system),
     statuses: listOf(actor.statuses),
     conditions: conditionsOf(actor),
     effects: effectsOf(actor),
@@ -170,6 +172,33 @@ function actorEntry(actor) {
 function listOf(value) {
   if (!value || typeof value[Symbol.iterator] !== "function" || typeof value === "string") return [];
   return [...value];
+}
+
+/** Land speed in feet: pf2e `attributes.speed.value`, dnd5e `attributes.movement.walk`, pf1 `attributes.speed.land.total`. */
+function speedOf(system) {
+  const speed = system.attributes?.speed ?? null;
+  return numberOrNull(speed?.total ?? speed?.value ?? speed?.land?.total ?? system.attributes?.movement?.walk);
+}
+
+/** Fortitude/reflex/will: pf2e `actor.saves.<name>.mod`, pf1 `attributes.savingThrows.<fort|ref|will>.total`, dnd5e con/dex/wis saves. */
+function savesOf(actor, system) {
+  return {
+    fortitude: saveOf(actor, system, "fortitude", "fort", "con"),
+    reflex: saveOf(actor, system, "reflex", "ref", "dex"),
+    will: saveOf(actor, system, "will", "will", "wis")
+  };
+}
+
+function saveOf(actor, system, pf2eName, pf1Name, dnd5eAbility) {
+  const dnd5eSave = system.abilities?.[dnd5eAbility]?.save;
+  return numberOrNull(actor.saves?.[pf2eName]?.mod
+    ?? system.saves?.[pf2eName]?.value
+    ?? system.attributes?.savingThrows?.[pf1Name]?.total
+    ?? dnd5eSave?.value ?? dnd5eSave);
+}
+
+function numberOrNull(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function hpOf(actor, system) {
