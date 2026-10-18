@@ -21,7 +21,8 @@
         "AlreadyRunning": "Combat not sent: Organizr still has an open combat in this project. End it there first ({message}).",
         "ServerError": "Combat sync: {message}",
         "StateFailed": "Combat sync for {name} failed: {message}"
-      }
+      },
+      "StateSent": "{name} synced to Organizr."
     },
     "Characters": {
       "Title": "Player characters",

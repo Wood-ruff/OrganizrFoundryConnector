@@ -1,4 +1,5 @@
 import { combatErrorKey, combatPayload, combatantState, moveActionOf } from "../service/CombatPayload.mjs";
+import { diffState, hasChanges, stateSnapshot } from "../service/StateDiff.mjs";
 import { isWorldLinked } from "../service/WorldLink.mjs";
 import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
 import { worldInfo } from "../config/WorldInfo.mjs";
@@ -9,6 +10,7 @@ const STATE_DELAY_MS = 600;
 
 const organizr = createOrganizrClient();
 const stateQueue = createKeyedDebounce((combat, combatant) => sendState(combat, combatant), STATE_DELAY_MS);
+const baselines = new Map();
 let statePaused = false;
 
 /** True for the one GM client that should talk to Organizr on behalf of the world. */
@@ -32,15 +34,17 @@ export async function sendCombat(combat, event) {
     ui.notifications.warn("ORGANIZR.Characters.Errors.NotLinked", { localize: true });
     return;
   }
+  const payload = combatPayload(combat, worldInfo(), event);
   let result;
   try {
-    result = await organizr.pushCombat(link, combatPayload(combat, worldInfo(), event));
+    result = await organizr.pushCombat(link, payload);
     await combat.setFlag(MODULE_ID, "sync", { serverUrl: link.serverUrl, projectId: link.projectId, startedAt: new Date().toISOString() });
   } catch (error) {
     ui.notifications.error(combatErrorKey(error.status ?? -1), { localize: true, format: { message: error.message } });
     return;
   }
   statePaused = false;
+  rememberBaselines(payload.combatants);
   ui.notifications.info("ORGANIZR.Combat.Sent", { localize: true, format: { round: String(combat.round ?? 0) } });
   for (const note of result?.notes ?? []) ui.notifications.warn("ORGANIZR.Combat.Note", { localize: true, format: { note } });
 }
@@ -59,6 +63,7 @@ export async function sendMove(combat, event) {
 /** Ends the synced combat in Organizr. */
 export async function sendEnd() {
   stateQueue.cancelAll();
+  baselines.clear();
   try {
     await organizr.endCombat(readWorldLink());
   } catch (error) {
@@ -72,10 +77,21 @@ export function queueState(combat, combatant) {
   stateQueue.call(combatant.id, combat, combatant);
 }
 
+function rememberBaselines(entries) {
+  baselines.clear();
+  for (const entry of entries) baselines.set(entry.id, stateSnapshot(entry));
+}
+
 async function sendState(combat, combatant) {
   if (!combat.combatants.has(combatant.id)) return;
+  const entry = combatantState(combatant, { type: "state", direction: 0 });
+  const snapshot = stateSnapshot(entry);
+  const changes = diffState(baselines.get(combatant.id), snapshot);
+  if (!hasChanges(changes)) return;
   try {
-    await organizr.pushCombatantState(readWorldLink(), combatant.id, combatantState(combatant, { type: "state", direction: 0 }));
+    await organizr.pushCombatantState(readWorldLink(), combatant.id, { ...entry, changes });
+    baselines.set(combatant.id, snapshot);
+    ui.notifications.info("ORGANIZR.Combat.StateSent", { localize: true, format: { name: combatant.name } });
   } catch (error) {
     if (error.status === 404 || error.status === 0) statePaused = true;
     ui.notifications.error("ORGANIZR.Combat.Errors.StateFailed", { localize: true, format: { name: combatant.name, message: error.message } });
