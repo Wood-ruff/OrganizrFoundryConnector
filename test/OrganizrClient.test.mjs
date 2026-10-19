@@ -149,3 +149,16 @@ test("pushCombatantState PUTs the state to the combatant path", async () => {
   assert.equal(calls[0].init.method, "PUT");
   assert.equal(calls[0].init.body, '{"id":"c0","defeated":true}');
 });
+
+test("combat commands are listed from and acknowledged to the commands path", async () => {
+  const calls = [];
+  const client = createOrganizrClient(fakeFetch(200, [{ id: 7, type: "removeCondition" }], calls));
+  const commands = await client.listCombatCommands(link);
+  await client.ackCombatCommands(link, { results: [{ id: 7, ok: true, error: null }] });
+  assert.deepEqual(commands, [{ id: 7, type: "removeCondition" }]);
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/projects/12/combat/commands");
+  assert.equal(calls[0].init.method, "GET");
+  assert.equal(calls[1].url, "https://organizr.example/api/foundry/projects/12/combat/commands/ack");
+  assert.equal(calls[1].init.method, "POST");
+  assert.equal(calls[1].init.body, '{"results":[{"id":7,"ok":true,"error":null}]}');
+});

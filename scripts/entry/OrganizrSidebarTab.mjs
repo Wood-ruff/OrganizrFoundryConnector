@@ -4,7 +4,8 @@ import { syncBody, syncErrorKey, syncFlag, syncOutcome } from "../service/Charac
 import { isWorldLinked, normalizeWorldLink } from "../service/WorldLink.mjs";
 import { isCollapsed, toggleSection } from "../service/SectionState.mjs";
 import {
-  MODULE_ID, readAutoSendCombat, readCollapsedSections, readWorldLink, writeAutoSendCombat, writeCollapsedSections, writeWorldLink
+  MODULE_ID, readAutoSendCombat, readCombatSync, readCollapsedSections, readWorldLink,
+  writeAutoSendCombat, writeCollapsedSections, writeCombatSync, writeWorldLink
 } from "../config/ModuleSettings.mjs";
 import { userRows, worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
@@ -53,6 +54,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     context.combat = combatOverview(game.combat, game.user);
     context.characters = characterRows(game.actors.contents, userRows());
     context.linked = isWorldLinked(link);
+    context.canSendCombat = context.linked && readCombatSync();
     context.combatCollapsed = isCollapsed(collapsed, "combat");
     context.charactersCollapsed = isCollapsed(collapsed, "characters");
     context.syncCollapsed = isCollapsed(collapsed, "sync");
@@ -72,7 +74,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
   }
 
   static async #onSendCombat(event, target) {
-    if (!game.combat || !game.user.isGM) return;
+    if (!game.combat || !game.user.isGM || !readCombatSync()) return;
     target.disabled = true;
     try {
       await sendCombat(game.combat, { type: "manual", direction: 0 });
@@ -126,6 +128,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     }
     await writeWorldLink(link);
     await writeAutoSendCombat(input.autoSendCombat);
+    await writeCombatSync(input.combatSync);
     ui.notifications.info(game.i18n.localize("ORGANIZR.Settings.Saved"));
     this.render();
   }
@@ -160,6 +163,7 @@ function linkContext(link) {
     hasToken: Boolean(link.apiToken),
     linked: isWorldLinked(link),
     autoSendCombat: readAutoSendCombat(),
+    combatSync: readCombatSync(),
     worldTitle: game.world.title
   };
 }

@@ -15,7 +15,7 @@
       </button>
       <button type="button" class="organizr-icon-button" data-action="sendCombat"
               data-tooltip="{{localize "ORGANIZR.Combat.Send"}}" aria-label="{{localize "ORGANIZR.Combat.Send"}}"
-              {{#unless linked}}disabled{{/unless}}>
+              {{#unless canSendCombat}}disabled{{/unless}}>
         <i class="fa-solid fa-cloud-arrow-up"></i>
       </button>
     {{/if}}

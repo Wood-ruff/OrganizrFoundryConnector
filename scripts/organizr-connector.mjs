@@ -2,7 +2,8 @@ import { OrganizrSidebarTab } from "./entry/OrganizrSidebarTab.mjs";
 import { isActiveGM, isSyncedCombat, queueState, sendCombat, sendEnd, sendMove } from "./entry/CombatSync.mjs";
 import { combatEvent, combatantOfActor, isStatusDocument } from "./service/CombatPayload.mjs";
 import { isWorldLinked } from "./service/WorldLink.mjs";
-import { readAutoSendCombat, readWorldLink, registerModuleSettings } from "./config/ModuleSettings.mjs";
+import { startCommandPolling } from "./entry/CombatCommandPoller.mjs";
+import { readAutoSendCombat, readCombatSync, readWorldLink, registerModuleSettings } from "./config/ModuleSettings.mjs";
 
 const TAB_ID = OrganizrSidebarTab.tabName;
 
@@ -45,6 +46,7 @@ Hooks.once("ready", () => {
   Hooks.on("updateCombatant", (combatant) => {
     if (shouldFollow(combatant.parent)) queueState(combatant.parent, combatant);
   });
+  startCommandPolling(() => shouldFollow(game.combat));
   Hooks.on("createActor", () => rerenderPart("characters"));
   Hooks.on("deleteActor", () => rerenderPart("characters"));
   Hooks.on("updateActor", (actor, changes) => {
@@ -69,11 +71,11 @@ function tabsWithOrganizrBeforeSettings(tabs) {
 }
 
 function shouldAutoSend() {
-  return readAutoSendCombat() && isActiveGM() && isWorldLinked(readWorldLink());
+  return readCombatSync() && readAutoSendCombat() && isActiveGM() && isWorldLinked(readWorldLink());
 }
 
 function shouldFollow(combat) {
-  return Boolean(combat) && isActiveGM() && isSyncedCombat(combat);
+  return Boolean(combat) && readCombatSync() && isActiveGM() && isSyncedCombat(combat);
 }
 
 function actorOf(embedded) {

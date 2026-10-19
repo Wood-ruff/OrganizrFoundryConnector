@@ -11,6 +11,7 @@ const STATE_DELAY_MS = 600;
 const organizr = createOrganizrClient();
 const stateQueue = createKeyedDebounce((combat, combatant) => sendState(combat, combatant), STATE_DELAY_MS);
 const baselines = new Map();
+const appliedCommands = new Map();
 let statePaused = false;
 
 /** True for the one GM client that should talk to Organizr on behalf of the world. */
@@ -64,6 +65,7 @@ export async function sendMove(combat, event) {
 export async function sendEnd() {
   stateQueue.cancelAll();
   baselines.clear();
+  appliedCommands.clear();
   try {
     await organizr.endCombat(readWorldLink());
   } catch (error) {
@@ -77,8 +79,16 @@ export function queueState(combat, combatant) {
   stateQueue.call(combatant.id, combat, combatant);
 }
 
+/** Remembers Organizr command ids applied to a combatant; the next state push reports them so the server can tell its own changes apart. */
+export function noteAppliedCommands(combatantId, commandIds) {
+  const ids = appliedCommands.get(combatantId) ?? new Set();
+  for (const id of commandIds) ids.add(id);
+  appliedCommands.set(combatantId, ids);
+}
+
 function rememberBaselines(entries) {
   baselines.clear();
+  appliedCommands.clear();
   for (const entry of entries) baselines.set(entry.id, stateSnapshot(entry));
 }
 
@@ -89,8 +99,10 @@ async function sendState(combat, combatant) {
   const changes = diffState(baselines.get(combatant.id), snapshot);
   if (!hasChanges(changes)) return;
   try {
-    await organizr.pushCombatantState(readWorldLink(), combatant.id, { ...entry, changes });
+    const appliedCommandIds = [...(appliedCommands.get(combatant.id) ?? [])];
+    await organizr.pushCombatantState(readWorldLink(), combatant.id, { ...entry, changes, appliedCommandIds });
     baselines.set(combatant.id, snapshot);
+    appliedCommands.delete(combatant.id);
     ui.notifications.info("ORGANIZR.Combat.StateSent", { localize: true, format: { name: combatant.name } });
   } catch (error) {
     if (error.status === 404 || error.status === 0) statePaused = true;

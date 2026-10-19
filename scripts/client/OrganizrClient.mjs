@@ -40,6 +40,17 @@ export function createOrganizrClient(fetchImpl = globalThis.fetch) {
       return readJson(response);
     },
 
+    async listCombatCommands({ serverUrl, apiToken, projectId }) {
+      const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/combat/commands`;
+      const response = await send(fetchImpl, url, apiToken, { method: "GET" });
+      return readJson(response);
+    },
+
+    async ackCombatCommands({ serverUrl, apiToken, projectId }, body) {
+      const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/combat/commands/ack`;
+      await send(fetchImpl, url, apiToken, { method: "POST", body });
+    },
+
     async listSheets({ serverUrl, apiToken }, projectId) {
       const query = projectId ? `?project=${encodeURIComponent(projectId)}` : "";
       const response = await send(fetchImpl, `${serverUrl}/api/foundry/sheets${query}`, apiToken, { method: "GET" });
