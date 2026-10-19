@@ -2,7 +2,7 @@ import { OrganizrSidebarTab } from "./entry/OrganizrSidebarTab.mjs";
 import { isActiveGM, isSyncedCombat, queueState, sendCombat, sendEnd, sendMove } from "./entry/CombatSync.mjs";
 import { combatEvent, combatantOfActor, isStatusDocument } from "./service/CombatPayload.mjs";
 import { isWorldLinked } from "./service/WorldLink.mjs";
-import { startCommandPolling } from "./entry/CombatCommandPoller.mjs";
+import { pullCommands } from "./entry/CombatCommandPull.mjs";
 import { readAutoSendCombat, readCombatSync, readWorldLink, registerModuleSettings } from "./config/ModuleSettings.mjs";
 
 const TAB_ID = OrganizrSidebarTab.tabName;
@@ -32,7 +32,7 @@ Hooks.once("ready", () => {
     if (event.type === "start") {
       if (shouldAutoSend() && !isSyncedCombat(combat)) sendCombat(combat, event);
     } else if (shouldFollow(combat)) {
-      sendMove(combat, event);
+      followMove(combat, event);
     }
   });
   Hooks.on("deleteCombat", (combat) => {
@@ -46,7 +46,6 @@ Hooks.once("ready", () => {
   Hooks.on("updateCombatant", (combatant) => {
     if (shouldFollow(combatant.parent)) queueState(combatant.parent, combatant);
   });
-  startCommandPolling(() => shouldFollow(game.combat));
   Hooks.on("createActor", () => rerenderPart("characters"));
   Hooks.on("deleteActor", () => rerenderPart("characters"));
   Hooks.on("updateActor", (actor, changes) => {
@@ -72,6 +71,11 @@ function tabsWithOrganizrBeforeSettings(tabs) {
 
 function shouldAutoSend() {
   return readCombatSync() && readAutoSendCombat() && isActiveGM() && isWorldLinked(readWorldLink());
+}
+
+async function followMove(combat, event) {
+  const moved = await sendMove(combat, event);
+  if (moved && shouldFollow(combat)) await pullCommands();
 }
 
 function shouldFollow(combat) {

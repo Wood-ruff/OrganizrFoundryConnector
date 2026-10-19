@@ -4,26 +4,13 @@ import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { noteAppliedCommands } from "./CombatSync.mjs";
 
-const POLL_MS = 3000;
-
 const organizr = createOrganizrClient();
-let timer = null;
 let polling = false;
 let pausedForStart = null;
 
-/** Polls Organizr for status commands every 3 s while `shouldPoll()` holds; never more than one request at a time. */
-export function startCommandPolling(shouldPoll) {
-  stopCommandPolling();
-  const tick = async () => {
-    if (shouldPoll() && !isPaused()) await pollOnce();
-    timer = setTimeout(tick, POLL_MS);
-  };
-  timer = setTimeout(tick, POLL_MS);
-}
-
-export function stopCommandPolling() {
-  clearTimeout(timer);
-  timer = null;
+/** Fetches and applies the commands Organizr queued for the synced combat; called once after every turn or round move. */
+export async function pullCommands() {
+  if (!isPaused()) await pollOnce();
 }
 
 function isPaused() {

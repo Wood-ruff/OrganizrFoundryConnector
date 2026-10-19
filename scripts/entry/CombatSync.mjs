@@ -50,15 +50,17 @@ export async function sendCombat(combat, event) {
   for (const note of result?.notes ?? []) ui.notifications.warn("ORGANIZR.Combat.Note", { localize: true, format: { note } });
 }
 
-/** Mirrors a turn or round move of a synced combat to Organizr. */
+/** Mirrors a turn or round move of a synced combat to Organizr; true when the move was accepted. */
 export async function sendMove(combat, event) {
   const action = moveActionOf(event);
-  if (!action) return;
+  if (!action) return false;
   try {
     await organizr.moveCombat(readWorldLink(), action);
   } catch (error) {
     ui.notifications.error(combatErrorKey(error.status ?? -1), { localize: true, format: { message: error.message } });
+    return false;
   }
+  return true;
 }
 
 /** Ends the synced combat in Organizr. */
