@@ -1,0 +1,106 @@
+import {
+  fitsSendLimit, isSendable, ownsSheetFlag, sendBody, sendErrorKey, sendOutcome, sentFlag
+} from "../service/DocumentSend.mjs";
+import { sheetFlag } from "../service/SheetImport.mjs";
+import { isWorldLinked } from "../service/WorldLink.mjs";
+import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
+import { createOrganizrClient } from "../client/OrganizrClient.mjs";
+
+const SEND_ICON = "fa-solid fa-cloud-arrow-up";
+const CONTEXT_MENU_GENERATION = 14;
+
+const organizr = createOrganizrClient();
+const sending = new Set();
+
+/** Adds "Send to Organizr" to the Actors/Items directory context menus (V14) and to actor and item sheet headers. */
+export function registerSendControls() {
+  if (game.release.generation >= CONTEXT_MENU_GENERATION) {
+    Hooks.on("getActorContextOptions", (app, entries) => entries.push(contextEntry((li) => game.actors.get(li.dataset.entryId))));
+    Hooks.on("getItemContextOptions", (app, entries) => entries.push(contextEntry((li) => game.items.get(li.dataset.entryId))));
+  }
+  Hooks.on("getActorSheetHeaderButtons", addHeaderButton);
+  Hooks.on("getItemSheetHeaderButtons", addHeaderButton);
+}
+
+/** Sends one actor or item to Organizr, which creates or updates its sheet; the document then carries the sheet flag. */
+export async function sendToOrganizr(document) {
+  if (!canSend(document) || sending.has(document.uuid)) return;
+  sending.add(document.uuid);
+  try {
+    await send(document, readWorldLink());
+  } finally {
+    sending.delete(document.uuid);
+  }
+}
+
+function contextEntry(documentOf) {
+  return {
+    label: "ORGANIZR.Send.Action",
+    icon: SEND_ICON,
+    visible: (li) => canSend(documentOf(li)),
+    onClick: (event, li) => sendToOrganizr(documentOf(li))
+  };
+}
+
+function addHeaderButton(sheet, buttons) {
+  const document = sheet.document;
+  if (!canSend(document)) return;
+  buttons.unshift({ label: "ORGANIZR.Send.Action", class: "organizr-send", icon: SEND_ICON, onclick: () => sendToOrganizr(document) });
+}
+
+function canSend(document) {
+  if (!document || !game.user.isGM || !isWorldLinked(readWorldLink())) return false;
+  return isSendable(sendableView(document), document.documentName);
+}
+
+function sendableView(document) {
+  return {
+    type: document.type,
+    system: { category: document.system?.category },
+    pack: document.pack ?? null,
+    flags: document.flags
+  };
+}
+
+async function send(document, link) {
+  const data = document.toObject();
+  const flag = sheetFlag(data);
+  const previous = ownsSheetFlag(flag, document.uuid) ? flag : null;
+  if (flag && !previous) {
+    ui.notifications.info("ORGANIZR.Send.Copy", { localize: true, format: { name: document.name } });
+  }
+  const body = sendBody(data, {
+    documentName: document.documentName,
+    uuid: document.uuid,
+    itemUuids: itemUuidsOf(document),
+    fileId: previous?.fileId ?? null
+  });
+  if (!fitsSendLimit(body)) {
+    ui.notifications.error("ORGANIZR.Send.Errors.TooLarge", { localize: true, format: { name: document.name } });
+    return;
+  }
+  let result;
+  try {
+    result = await organizr.pushDocument(link, body);
+  } catch (error) {
+    const key = sendErrorKey(error.status ?? -1);
+    ui.notifications.error(key, { localize: true, format: { name: document.name, message: error.message } });
+    return;
+  }
+  await document.setFlag(MODULE_ID, "sheet", sentFlag(result, link, previous, document.uuid));
+  notifySent(document.name, sendOutcome(result));
+}
+
+function itemUuidsOf(document) {
+  if (document.documentName !== "Actor") return new Map();
+  return new Map(document.items.contents.map((item) => [item.id, item.uuid]));
+}
+
+function notifySent(name, outcome) {
+  ui.notifications.info(outcome.key, { localize: true, format: { name, ...outcome.data } });
+  if (outcome.droppedSummary) {
+    ui.notifications.warn("ORGANIZR.Send.Dropped", { localize: true, format: { name, ...outcome.droppedSummary } });
+  }
+  for (const note of outcome.notes) console.info(`Organizr connector: ${name}: ${note}`);
+  for (const line of outcome.dropped) console.info(`Organizr connector: ${name}: not kept: ${line}`);
+}

@@ -93,14 +93,40 @@ test("a rejected file request surfaces the status", async () => {
   await assert.rejects(client.fetchFileBlob(link, 77), { status: 403, message: "Not your project" });
 });
 
-test("fetchFoundryDocument gets the sheet's Foundry document for the world's system", async () => {
+test("fetchFoundryDocument asks for the world's system together with companions=true", async () => {
   const calls = [];
-  const client = createOrganizrClient(fakeFetch(200, { name: "Goblin", type: "npc" }, calls));
-  const document = await client.fetchFoundryDocument(link, 5, "pf2e");
-  assert.deepEqual(document, { name: "Goblin", type: "npc" });
-  assert.equal(calls[0].url, "https://organizr.example/api/foundry/sheets/5/foundry?system=pf2e");
+  const client = createOrganizrClient(fakeFetch(200, { document: { name: "Goblin", type: "npc" }, companions: [] }, calls));
+  const payload = await client.fetchFoundryDocument(link, 5, "pf2e");
+  assert.deepEqual(payload, { document: { name: "Goblin", type: "npc" }, companions: [] });
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/sheets/5/foundry?system=pf2e&companions=true");
   assert.equal(calls[0].init.method, "GET");
   assert.equal(calls[0].init.headers.Authorization, "Bearer org_secret");
+});
+
+test("fetchFoundryDocument without a system still asks for companions", async () => {
+  const calls = [];
+  await createOrganizrClient(fakeFetch(200, {}, calls)).fetchFoundryDocument(link, 5, "");
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/sheets/5/foundry?companions=true");
+});
+
+test("pushDocument posts the body to the project's documents path, folder id optional", async () => {
+  const calls = [];
+  const result = { kind: "loot", fileId: 41, folderId: 7, created: 3, updated: 0, synced: false, notes: [], dropped: [] };
+  const client = createOrganizrClient(fakeFetch(200, result, calls));
+  const answer = await client.pushDocument(link, { name: "Chest", documentName: "Actor", uuid: "Actor.L1" });
+  assert.deepEqual(answer, result);
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/projects/12/documents");
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer org_secret");
+  assert.equal(calls[0].init.headers["Content-Type"], "application/json");
+  assert.equal(calls[0].init.body, '{"name":"Chest","documentName":"Actor","uuid":"Actor.L1"}');
+  await client.pushDocument(link, {}, 9);
+  assert.equal(calls[1].url, "https://organizr.example/api/foundry/projects/12/documents?folderId=9");
+});
+
+test("pushDocument surfaces a 422 with the server's reason", async () => {
+  const client = createOrganizrClient(fakeFetch(422, { error: "Coin items cannot be imported" }, []));
+  await assert.rejects(client.pushDocument(link, {}), { status: 422, message: "Coin items cannot be imported" });
 });
 
 test("a 422 from the document endpoint carries the server's reason", async () => {

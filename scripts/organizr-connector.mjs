@@ -3,6 +3,7 @@ import { isActiveGM, isSyncedCombat, queueState, sendCombat, sendEnd, sendMove }
 import { combatEvent, combatantOfActor, isStatusDocument } from "./service/CombatPayload.mjs";
 import { isWorldLinked } from "./service/WorldLink.mjs";
 import { pullCommands } from "./entry/CombatCommandPull.mjs";
+import { registerSendControls } from "./entry/DocumentSend.mjs";
 import { readAutoSendCombat, readCombatSync, readWorldLink, registerModuleSettings } from "./config/ModuleSettings.mjs";
 
 const TAB_ID = OrganizrSidebarTab.tabName;
@@ -23,6 +24,7 @@ const CHARACTER_LIST_FIELDS = ["name", "img", "ownership", "type"];
 Hooks.once("init", () => {
   registerModuleSettings();
   registerSidebarTab();
+  registerSendControls();
 });
 
 Hooks.once("ready", () => {

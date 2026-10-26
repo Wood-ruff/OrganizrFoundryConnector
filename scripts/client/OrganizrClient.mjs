@@ -17,6 +17,13 @@ export function createOrganizrClient(fetchImpl = globalThis.fetch) {
       return readJson(response);
     },
 
+    async pushDocument({ serverUrl, apiToken, projectId }, body, folderId) {
+      const query = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
+      const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/documents${query}`;
+      const response = await send(fetchImpl, url, apiToken, { method: "POST", body });
+      return readJson(response);
+    },
+
     async pushCombat({ serverUrl, apiToken, projectId }, body) {
       const url = `${serverUrl}/api/foundry/projects/${encodeURIComponent(projectId)}/combats`;
       const response = await send(fetchImpl, url, apiToken, { method: "POST", body });
@@ -58,8 +65,8 @@ export function createOrganizrClient(fetchImpl = globalThis.fetch) {
     },
 
     async fetchFoundryDocument({ serverUrl, apiToken }, fileId, systemId) {
-      const query = systemId ? `?system=${encodeURIComponent(systemId)}` : "";
-      const url = `${serverUrl}/api/foundry/sheets/${encodeURIComponent(fileId)}/foundry${query}`;
+      const system = systemId ? `system=${encodeURIComponent(systemId)}&` : "";
+      const url = `${serverUrl}/api/foundry/sheets/${encodeURIComponent(fileId)}/foundry?${system}companions=true`;
       const response = await send(fetchImpl, url, apiToken, { method: "GET" });
       return readJson(response);
     },
