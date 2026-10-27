@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  documentKind, importErrorKey, isImportable, linkBody, linkedIndex, portraitFileName, sheetFlag, withPortrait,
-  withRequestedFileId
+  appliesPortrait, documentKind, importErrorKey, isImportable, linkBody, linkedIndex, pickLinked, portraitFileName,
+  sheetFlag, withDocumentUuid, withPortrait, withRequestedFileId
 } from "../scripts/service/SheetImport.mjs";
 
 const documentTypes = { Actor: ["character", "npc", "loot"], Item: ["weapon", "spell", "action"] };
@@ -29,12 +29,37 @@ test("documentKind picks Actor or Item from the world's registered sub-types", (
   assert.equal(documentKind({ type: "npc" }, undefined), null);
 });
 
-test("linkedIndex maps file ids to the documents carrying the flag", () => {
+test("linkedIndex lists all copies per file id and skips companions", () => {
   const a = { name: "A", flags: { "organizr-foundry-connector": { sheet: { fileId: 5 } } } };
+  const copy = { name: "A copy", flags: { "organizr-foundry-connector": { sheet: { fileId: 5 } } } };
   const b = { name: "B", flags: { "organizr-foundry-connector": { sync: { characterFileId: 9 } } } };
-  const index = linkedIndex([a, b, { name: "C" }]);
+  const companion = { name: "Zap", flags: { "organizr-foundry-connector": { sheet: { fileId: 5 }, companion: { fileId: 5, label: "Action: Zap" } } } };
+  const index = linkedIndex([a, b, copy, companion, { name: "C" }]);
   assert.equal(index.size, 1);
-  assert.equal(index.get("5"), a);
+  assert.deepEqual(index.get("5"), [a, copy]);
+  assert.equal(index.get("5")[0], a);
+});
+
+test("spellsActions14 pickLinked prefers the recorded uuid, else the oldest, and counts duplicates", () => {
+  const original = { uuid: "Item.A", _stats: { createdTime: 100 } };
+  const clone = { uuid: "Item.B", _stats: { createdTime: 200 } };
+  const undated = { uuid: "Item.C" };
+  assert.deepEqual(pickLinked([clone, original], "Item.B"), { target: clone, duplicates: 1 });
+  assert.deepEqual(pickLinked([clone, undated, original], "Item.Z"), { target: original, duplicates: 2 });
+  assert.deepEqual(pickLinked([undated, clone], null), { target: clone, duplicates: 1 });
+  assert.deepEqual(pickLinked([undated], null), { target: undated, duplicates: 0 });
+  assert.deepEqual(pickLinked([], "Item.A"), { target: null, duplicates: 0 });
+  assert.deepEqual(pickLinked(undefined, null), { target: null, duplicates: 0 });
+});
+
+test("items11 portrait only for actors with a default img", () => {
+  assert.equal(appliesPortrait("Actor", { type: "npc", img: "systems/pf2e/icons/default-icons/npc.svg" }), true);
+  assert.equal(appliesPortrait("Actor", { type: "npc", img: "icons/svg/mystery-man.svg" }), true);
+  assert.equal(appliesPortrait("Actor", { type: "npc", img: "" }), true);
+  assert.equal(appliesPortrait("Actor", { type: "npc" }), true);
+  assert.equal(appliesPortrait("Actor", { type: "loot", img: "icons/containers/chest/chest-wooden-tied-white.webp" }), false);
+  assert.equal(appliesPortrait("Item", { type: "equipment", img: "systems/pf2e/icons/default-icons/equipment.svg" }), false);
+  assert.equal(appliesPortrait("Item", { type: "spell", img: "" }), false);
 });
 
 test("portrait file names follow the media type; unknown types give null", () => {
@@ -64,7 +89,7 @@ test("withRequestedFileId stamps the requested id into the sheet flag without to
   assert.deepEqual(bare.flags, { "organizr-foundry-connector": { sheet: { fileId: 7 } } });
 });
 
-test("withPortrait sets img and the prototype token image unless the token has its own", () => {
+test("withPortrait follow rule: the token follows when empty, the mystery man or the pre-portrait img", () => {
   const actor = { name: "Goblin", img: "icons/svg/mystery-man.svg", prototypeToken: { name: "Goblin", texture: { src: "icons/svg/mystery-man.svg", scaleX: 1 } } };
   const stored = withPortrait(actor, "worlds/w/organizr-portraits/5.png");
   assert.equal(stored.img, "worlds/w/organizr-portraits/5.png");
@@ -73,6 +98,12 @@ test("withPortrait sets img and the prototype token image unless the token has i
 
   const custom = withPortrait({ prototypeToken: { texture: { src: "tokens/goblin.webp" } } }, "p.png");
   assert.equal(custom.prototypeToken.texture.src, "tokens/goblin.webp");
+
+  const following = withPortrait({ img: "worlds/w/organizr-portraits/5.png", prototypeToken: { texture: { src: "worlds/w/organizr-portraits/5.png" } } }, "worlds/w/organizr-portraits/5.webp");
+  assert.equal(following.prototypeToken.texture.src, "worlds/w/organizr-portraits/5.webp");
+
+  const empty = withPortrait({ img: "systems/pf2e/icons/default-icons/npc.svg", prototypeToken: { texture: {} } }, "p.png");
+  assert.equal(empty.prototypeToken.texture.src, "p.png");
 
   const item = withPortrait({ name: "Sword", type: "weapon" }, "p.png");
   assert.equal(item.img, "p.png");
@@ -87,4 +118,10 @@ test("link body and error keys", () => {
   assert.equal(importErrorKey(404), "ORGANIZR.Browser.Errors.SheetMissing");
   assert.equal(importErrorKey(422), "ORGANIZR.Browser.Errors.ImportRefused");
   assert.equal(importErrorKey(-1), "ORGANIZR.Browser.Errors.ImportRefused");
+});
+
+test("i4 withDocumentUuid names the document in a copy of the sheet flag", () => {
+  const flag = { fileId: 30, projectId: 12, type: "npc", portraitFileId: null };
+  assert.deepEqual(withDocumentUuid(flag, "Actor.npcActor00000001"), { ...flag, documentUuid: "Actor.npcActor00000001" });
+  assert.equal(flag.documentUuid, undefined);
 });

@@ -1,0 +1,15 @@
+<div class="organizr-refresh-body">
+  {{#if batch}}
+    <p>{{localize "ORGANIZR.Refresh.BatchCounts" create=batch.create refresh=batch.refresh}}</p>
+    {{#if batch.refresh}}<p class="organizr-hint">{{localize "ORGANIZR.Refresh.BatchKeeps"}}</p>{{/if}}
+    {{#if batch.skipped}}<p>{{localize "ORGANIZR.Refresh.BatchSkipped" count=batch.skipped}}</p>{{/if}}
+  {{else}}
+    <p>{{localize bodyKey}}</p>
+  {{/if}}
+  {{#if showRestore}}
+    <label class="organizr-refresh-restore">
+      <input type="checkbox" name="restoreInventory">
+      <span>{{localize "ORGANIZR.Refresh.RestoreInventory"}}</span>
+    </label>
+  {{/if}}
+</div>

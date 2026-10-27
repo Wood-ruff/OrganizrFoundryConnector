@@ -69,10 +69,13 @@
       "PortraitFailed": "{name}: the portrait could not be stored in Foundry; the sheet was imported without it.",
       "LinkFailed": "{name} was imported, but Organizr could not record the link. Import again later to retry.",
       "ImportAll": "Import all ({count})",
-      "ImportGroup": "Import every sheet of this kind shown here ({count}); copies already in the world are updated",
-      "ImportProject": "Import every importable sheet of this project shown here ({count}); copies already in the world are updated",
-      "BatchDone": "{imported} imported, {updated} updated, {failed} failed ({total} sheets).",
+      "ImportGroup": "Import every sheet of this kind shown here ({count}); copies already in the world are refreshed, linked loot is skipped unless you restore it",
+      "ImportProject": "Import every importable sheet of this project shown here ({count}); copies already in the world are refreshed, linked loot is skipped unless you restore it",
+      "BatchDone": "{imported} imported, {updated} updated, {skipped} skipped, {failed} failed ({total} sheets).",
       "BatchFailed": "{name}: {message}",
+      "Duplicates": "{name}: {count} more world copies carry the link to this sheet; only {uuid} was updated.",
+      "CompanionsAdded": "{count} abilities added as action items in folder {folder}.",
+      "CompanionsFailed": "{name}: {count} abilities could not be added as action items (see the console).",
       "Types": {
         "character": "Player characters",
         "npc": "NPCs",
@@ -90,6 +93,36 @@
         "SheetMissing": "The sheet no longer exists in Organizr.",
         "ImportRefused": "Organizr could not export the sheet: {message}",
         "UnknownType": "This world's system has no document type \"{type}\"."
+      }
+    },
+    "Refresh": {
+      "Title": "Refresh \"{name}\" from Organizr?",
+      "ActorBody": "Replaces stats, strikes, abilities and spells. Keeps the token (image, name, disposition), current HP, spent focus points and spell slots, conditions and effects.",
+      "LootBody": "Replaces the name, image and loot settings. Keeps the token and the current inventory and coins unless you tick the box below.",
+      "ItemBody": "Replaces this item with the Organizr sheet.",
+      "RestoreInventory": "Also restore inventory and coins (puts taken items back)",
+      "Confirm": "Refresh",
+      "Cancel": "Cancel",
+      "BatchTitle": "Import all from Organizr?",
+      "BatchCounts": "{create} new, {refresh} copies already in this world are refreshed.",
+      "BatchKeeps": "Refreshed actors keep their token, current HP, spent focus points and spell slots, conditions and effects; refreshed items are replaced.",
+      "BatchSkipped": "{count} loot actors already in this world are skipped so taken items do not come back.",
+      "BatchConfirm": "Import"
+    },
+    "Send": {
+      "Action": "Send to Organizr",
+      "Created": "{name} was sent to Organizr as a new {kind} sheet ({created} sheets created, {updated} updated).",
+      "Updated": "{name} updated its {kind} sheet in Organizr ({created} sheets created, {updated} updated).",
+      "Dropped": "{name}: Organizr could not keep {count} parts: {first} (all lines in the console).",
+      "Copy": "{name} is a copy of another linked document, so Organizr makes a new sheet for it instead of changing the original's.",
+      "Errors": {
+        "Unreachable": "{name}: the Organizr server did not answer ({message}).",
+        "TokenRejected": "{name}: the API token was rejected. It may be expired or revoked.",
+        "WrongProject": "{name}: the API token is not allowed to use this project.",
+        "ProjectNotFound": "{name}: Organizr has no import for this document or the project does not exist ({message}).",
+        "Refused": "{name}: Organizr refused the document: {message}",
+        "ServerError": "{name}: Organizr could not import the document: {message}",
+        "TooLarge": "{name} is larger than the 5 MB Organizr accepts; nothing was sent."
       }
     },
     "Settings": {

@@ -2,14 +2,14 @@
   "id": "organizr-foundry-connector",
   "title": "Organizr Connector",
   "description": "Connects a live Foundry VTT session to an Organizr campaign workspace.",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "authors": [{ "name": "Wood-ruff" }],
   "compatibility": {
     "minimum": "13.341",
     "verified": "14"
   },
   "esmodules": ["scripts/organizr-connector.mjs"],
-  "styles": ["styles/organizr-connector.css"],
+  "styles": ["styles/organizr-connector.css", "styles/organizr-dialogs.css"],
   "languages": [
     { "lang": "en", "name": "English", "path": "lang/en.json" }
   ],

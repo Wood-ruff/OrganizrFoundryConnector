@@ -1,0 +1,22 @@
+.organizr-refresh-confirm .organizr-refresh-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 28rem;
+}
+
+.organizr-refresh-confirm .organizr-refresh-body p {
+  margin: 0;
+}
+
+.organizr-refresh-confirm .organizr-refresh-restore {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.organizr-refresh-confirm .organizr-refresh-restore input {
+  flex: none;
+  margin: 0;
+}

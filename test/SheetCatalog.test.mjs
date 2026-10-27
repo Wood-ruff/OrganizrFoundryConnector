@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { filterSheets, groupSheets, importableFileIds, listErrorKey, worldActorId } from "../scripts/service/SheetCatalog.mjs";
+import {
+  batchPlan, filterSheets, groupSheets, importableFileIds, importableSheets, listErrorKey, worldActorId
+} from "../scripts/service/SheetCatalog.mjs";
 
 const entries = [
   { fileId: 1, projectId: 10, projectName: "Dragonfall", type: "npc", name: "Goblin Warrior", level: "1", imageFileId: 5, uuid: null, tags: ["goblin", "humanoid"], updatedAt: "2026-10-01T00:00:00Z" },
@@ -30,9 +32,10 @@ test("groupSheets nests projects then types in server order with counts and row 
   assert.equal(projects[0].types[0].labelKey, "ORGANIZR.Browser.Types.npc");
   assert.deepEqual(projects[0].types[0].sheets[0], {
     fileId: 1, type: "npc", importable: true, name: "Goblin Warrior", level: "1", imageFileId: 5,
-    tags: ["goblin", "humanoid"], worldActorId: null, updatedAt: "2026-10-01T00:00:00Z"
+    tags: ["goblin", "humanoid"], uuid: null, worldActorId: null, updatedAt: "2026-10-01T00:00:00Z"
   });
   assert.equal(projects[1].types[0].sheets[0].worldActorId, "Ab12Cd34Ef56Gh78");
+  assert.equal(projects[1].types[0].sheets[0].uuid, "Actor.Ab12Cd34Ef56Gh78");
   assert.equal(projects[1].types[0].sheets[0].importable, false);
 });
 
@@ -68,4 +71,38 @@ test("listErrorKey maps statuses to localization keys", () => {
   assert.equal(listErrorKey(401), "ORGANIZR.Browser.Errors.TokenRejected");
   assert.equal(listErrorKey(403), "ORGANIZR.Browser.Errors.Forbidden");
   assert.equal(listErrorKey(500), "ORGANIZR.Browser.Errors.ServerError");
+});
+
+test("importableSheets returns the importable rows of a project or type group", () => {
+  const projects = groupSheets(entries);
+  assert.deepEqual(importableSheets(projects, 10).map((sheet) => sheet.fileId), [1, 2, 3]);
+  assert.deepEqual(importableSheets(projects, 10, "spell").map((sheet) => sheet.name), ["Fireball"]);
+  assert.deepEqual(importableSheets(projects, 20), []);
+});
+
+const batch = [
+  { fileId: 1, type: "npc", uuid: "Actor.N1" },
+  { fileId: 2, type: "loot", uuid: "Actor.L1" },
+  { fileId: 3, type: "item", uuid: null },
+  { fileId: 4, type: "loot", uuid: null }
+];
+
+test("loot2 batchPlan skips linked loot unless restoring", () => {
+  const linked = new Map([["1", []], ["2", []]]);
+  const plan = batchPlan(batch, linked, false);
+  assert.deepEqual(plan.create.map((sheet) => sheet.fileId), [3, 4]);
+  assert.deepEqual(plan.refresh.map((sheet) => sheet.fileId), [1]);
+  assert.deepEqual(plan.skippedLoot.map((sheet) => sheet.fileId), [2]);
+
+  const restoring = batchPlan(batch, linked, true);
+  assert.deepEqual(restoring.refresh.map((sheet) => sheet.fileId), [1, 2]);
+  assert.deepEqual(restoring.skippedLoot, []);
+  assert.equal(restoring.refresh[1].uuid, "Actor.L1");
+});
+
+test("batchPlan creates everything when nothing is linked and accepts a Set of ids", () => {
+  const plan = batchPlan(batch, new Set());
+  assert.equal(plan.create.length, 4);
+  assert.deepEqual(plan.refresh, []);
+  assert.deepEqual(batchPlan([], new Set(["1"])), { create: [], refresh: [], skippedLoot: [] });
 });

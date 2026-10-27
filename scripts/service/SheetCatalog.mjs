@@ -75,6 +75,7 @@ function sheetRow(entry) {
     level: entry.level ?? null,
     imageFileId: entry.imageFileId ?? null,
     tags: entry.tags ?? [],
+    uuid: entry.uuid ?? null,
     worldActorId: worldActorId(entry.uuid),
     updatedAt: entry.updatedAt ?? null
   };
@@ -92,10 +93,29 @@ function finishType(type) {
   return { ...type, importableCount };
 }
 
-/** File ids of the importable sheets in one project, or in one of its type groups when `type` is given. */
-export function importableFileIds(projects, projectId, type) {
+/** The importable sheet rows in one project, or in one of its type groups when `type` is given. */
+export function importableSheets(projects, projectId, type) {
   const project = projects.find((candidate) => String(candidate.projectId) === String(projectId));
   if (!project) return [];
   const groups = type ? project.types.filter((group) => group.type === type) : project.types;
-  return groups.flatMap((group) => group.sheets.filter((sheet) => sheet.importable).map((sheet) => sheet.fileId));
+  return groups.flatMap((group) => group.sheets.filter((sheet) => sheet.importable));
+}
+
+/** File ids of the importable sheets in one project, or in one of its type groups when `type` is given. */
+export function importableFileIds(projects, projectId, type) {
+  return importableSheets(projects, projectId, type).map((sheet) => sheet.fileId);
+}
+
+/**
+ * Splits a batch into sheets to create (not in this world), to refresh (linked) and linked loot that is skipped
+ * so a looted chest is not restocked; restoring the inventory moves that loot into `refresh`.
+ */
+export function batchPlan(sheets, linkedFileIds, restoreInventory = false) {
+  const plan = { create: [], refresh: [], skippedLoot: [] };
+  for (const sheet of sheets ?? []) {
+    if (!linkedFileIds.has(String(sheet.fileId))) plan.create.push(sheet);
+    else if (sheet.type === "loot" && !restoreInventory) plan.skippedLoot.push(sheet);
+    else plan.refresh.push(sheet);
+  }
+  return plan;
 }
