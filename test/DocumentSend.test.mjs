@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  fitsSendLimit, isSendable, ownsSheetFlag, sendBody, sendErrorKey, sendOutcome, sentFlag
+  fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlag, ownsSheetFlagAmong, recordedUuidOf,
+  sendBody, sendErrorKey, sendOutcome, sentFlag
 } from "../scripts/service/DocumentSend.mjs";
 
 const MODULE = "organizr-foundry-connector";
@@ -91,6 +92,107 @@ test("i4 a duplicate that copied the sheet flag is not sent onto the original's 
   assert.equal(body.organizr, undefined);
 });
 
+function copy(uuid, createdTime, sheet = { fileId: 30, projectId: 12, type: "loot" }) {
+  const stats = createdTime === undefined ? {} : { createdTime };
+  return { uuid, flags: { [MODULE]: { sheet: { ...sheet } } }, _stats: stats };
+}
+
+const ORIGINAL = "Actor.lootActor0000001";
+const DUPLICATE = "Actor.copyOfChest00001";
+
+test("legacy flag on the only copy owns it", () => {
+  const original = copy(ORIGINAL, 100);
+  assert.equal(needsRecordedUuid(legacyFlagCandidates(original, [original])), false);
+  assert.equal(needsRecordedUuid(legacyFlagCandidates(original, [])), false);
+  assert.equal(ownsSheetFlagAmong(original, [original], null), true);
+  assert.equal(ownsSheetFlagAmong(original, [], null), true);
+});
+
+test("a legacy copy beside other files or companions still owns its flag alone", () => {
+  const original = copy(ORIGINAL, 100);
+  const otherFile = copy("Actor.otherChest000001", 50, { fileId: 31 });
+  const companion = copy("Item.companion0000001", 10);
+  companion.flags[MODULE].companion = { fileId: 30, label: "Action: Spark" };
+  const candidates = legacyFlagCandidates(original, [original, otherFile, companion]);
+  assert.deepEqual(candidates.map((entry) => entry.uuid), [ORIGINAL]);
+  assert.equal(ownsSheetFlagAmong(original, [original, otherFile, companion], null), true);
+});
+
+test("a stamped copy owns a legacy flag over its duplicates", () => {
+  const stamped = copy("Actor.stampedChest0001", 300, { fileId: 30, documentUuid: "Actor.stampedChest0001" });
+  const legacy = copy(DUPLICATE, 100);
+  const copies = [stamped, legacy];
+  assert.deepEqual(legacyFlagCandidates(legacy, copies), []);
+  assert.equal(needsRecordedUuid(legacyFlagCandidates(legacy, copies)), false);
+  assert.equal(ownsSheetFlagAmong(legacy, copies, DUPLICATE), false);
+  assert.equal(ownsSheetFlagAmong(stamped, copies, null), true);
+});
+
+test("the recorded uuid picks the owner among legacy copies", () => {
+  const original = copy(ORIGINAL, 100);
+  const duplicate = copy(DUPLICATE, 200);
+  const copies = [original, duplicate];
+  assert.equal(needsRecordedUuid(legacyFlagCandidates(duplicate, copies)), true);
+  assert.equal(ownsSheetFlagAmong(duplicate, copies, DUPLICATE), true);
+  assert.equal(ownsSheetFlagAmong(original, copies, DUPLICATE), false);
+  assert.equal(ownsSheetFlagAmong(original, copies, ORIGINAL), true);
+  assert.equal(ownsSheetFlagAmong(duplicate, copies, ORIGINAL), false);
+});
+
+test("without a recorded uuid the oldest legacy copy owns", () => {
+  const original = copy(ORIGINAL, 100);
+  const duplicate = copy(DUPLICATE, 200);
+  const copies = [duplicate, original];
+  assert.equal(ownsSheetFlagAmong(original, copies, null), true);
+  assert.equal(ownsSheetFlagAmong(duplicate, copies, null), false);
+  assert.equal(ownsSheetFlagAmong(original, copies, "Actor.goneChest000001"), true);
+  assert.equal(ownsSheetFlagAmong(duplicate, copies, "Actor.goneChest000001"), false);
+
+  const undated = copy("Actor.undatedChest0001");
+  assert.equal(ownsSheetFlagAmong(undated, [undated, duplicate], null), false);
+  assert.equal(ownsSheetFlagAmong(duplicate, [undated, duplicate], null), true);
+});
+
+test("a legacy document outside the world list joins its copies, so a dragged-in item is a copy", () => {
+  const worldItem = copy("Item.ringOfSparks0001", 100, { fileId: 30, type: "item" });
+  const embedded = copy("Actor.a.Item.ringOfSparks0002", 200, { fileId: 30, type: "item" });
+  assert.deepEqual(legacyFlagCandidates(embedded, [worldItem]).map((entry) => entry.uuid),
+    ["Item.ringOfSparks0001", "Actor.a.Item.ringOfSparks0002"]);
+  assert.equal(ownsSheetFlagAmong(embedded, [worldItem], null), false);
+});
+
+test("copies stamped with another uuid do not compete for a legacy flag", () => {
+  const legacy = copy(ORIGINAL, 200);
+  const stampedDuplicate = copy(DUPLICATE, 100, { fileId: 30, documentUuid: "Actor.goneChest000001" });
+  const copies = [legacy, stampedDuplicate];
+  assert.deepEqual(legacyFlagCandidates(legacy, copies).map((entry) => entry.uuid), [ORIGINAL]);
+  assert.equal(ownsSheetFlagAmong(legacy, copies, null), true);
+  assert.equal(ownsSheetFlagAmong(stampedDuplicate, copies, null), false);
+});
+
+test("stamped flags keep the stamped rule among copies", () => {
+  const original = copy(ORIGINAL, 100, { fileId: 30, documentUuid: ORIGINAL });
+  const duplicate = copy(DUPLICATE, 200, { fileId: 30, documentUuid: ORIGINAL });
+  assert.equal(ownsSheetFlagAmong(original, [original, duplicate], DUPLICATE), true);
+  assert.equal(ownsSheetFlagAmong(duplicate, [original, duplicate], DUPLICATE), false);
+  assert.equal(ownsSheetFlagAmong({ uuid: ORIGINAL, flags: {} }, [], null), false);
+});
+
+test("recordedUuidOf finds the row by file id", () => {
+  const rows = [
+    { fileId: 29, uuid: "Actor.otherChest000001" },
+    { fileId: 30, uuid: ORIGINAL },
+    { fileId: 32, uuid: null }
+  ];
+  assert.equal(recordedUuidOf(rows, 30), ORIGINAL);
+  assert.equal(recordedUuidOf(rows, "30"), ORIGINAL);
+  assert.equal(recordedUuidOf([{ fileId: "30", uuid: ORIGINAL }], 30), ORIGINAL);
+  assert.equal(recordedUuidOf(rows, 31), null);
+  assert.equal(recordedUuidOf(rows, 32), null);
+  assert.equal(recordedUuidOf(null, 30), null);
+  assert.equal(recordedUuidOf({ fileId: 30, uuid: ORIGINAL }, 30), null);
+});
+
 test("i9 companion action items are not sendable", () => {
   const companion = { type: "action", system: {}, flags: { [MODULE]: { companion: { fileId: 30, label: "Action: Spark" } } } };
   assert.equal(isSendable(companion, "Item"), false);
@@ -127,4 +229,52 @@ test("bodies over 5 MB do not fit the send limit", () => {
   assert.equal(fitsSendLimit({ name: "small" }), true);
   assert.equal(fitsSendLimit({ text: "x".repeat(5 * 1024 * 1024) }), false);
   assert.equal(fitsSendLimit({ text: "ä".repeat(3 * 1024 * 1024) }), false);
+});
+
+test("f4 a copy's body carries no sheet flag pointing at the original's file", () => {
+  const stampedCopy = lootActor();
+  stampedCopy.flags[MODULE].sheet.documentUuid = ORIGINAL;
+  stampedCopy.flags[MODULE].note = "kept";
+  const stampedBody = sendBody(stampedCopy, { documentName: "Actor", uuid: DUPLICATE, fileId: null });
+  assert.equal(stampedBody.organizr, undefined);
+  assert.equal(stampedBody.flags[MODULE].sheet, undefined);
+  assert.equal(stampedBody.flags[MODULE].note, "kept");
+  assert.equal(stampedCopy.flags[MODULE].sheet.fileId, 30);
+
+  const legacyCopy = lootActor();
+  const legacyBody = sendBody(legacyCopy, { documentName: "Actor", uuid: DUPLICATE, fileId: null });
+  assert.equal(legacyBody.flags[MODULE].sheet, undefined);
+  assert.equal(legacyCopy.flags[MODULE].sheet.fileId, 30);
+});
+
+test("f4 the owner's body keeps its sheet flag beside the organizr block", () => {
+  const owner = lootActor();
+  const body = sendBody(owner, { documentName: "Actor", uuid: ORIGINAL, fileId: 30 });
+  assert.deepEqual(body.organizr, { fileId: 30 });
+  assert.deepEqual(body.flags[MODULE].sheet, owner.flags[MODULE].sheet);
+});
+
+test("f4 exactly one undated legacy copy owns, whichever is sent", () => {
+  const first = copy(ORIGINAL);
+  const second = copy(DUPLICATE);
+  const copies = [first, second];
+  for (const recorded of [null, "Actor.goneChest000001"]) {
+    const owners = copies.filter((sent) => ownsSheetFlagAmong(sent, copies, recorded));
+    assert.deepEqual(owners.map((owner) => owner.uuid), [ORIGINAL]);
+  }
+});
+
+test("f4 exactly one legacy copy owns on equal createdTime, whichever is sent", () => {
+  const first = copy(ORIGINAL, 100);
+  const second = copy(DUPLICATE, 100);
+  const copies = [first, second];
+  const owners = copies.filter((sent) => ownsSheetFlagAmong(sent, copies, null));
+  assert.deepEqual(owners.map((owner) => owner.uuid), [ORIGINAL]);
+});
+
+test("f4 the sent copy keeps its world place among the candidates", () => {
+  const first = copy(ORIGINAL, 100);
+  const second = copy(DUPLICATE, 200);
+  assert.deepEqual(legacyFlagCandidates(second, [first, second]).map((entry) => entry.uuid), [ORIGINAL, DUPLICATE]);
+  assert.deepEqual(legacyFlagCandidates(first, [first, second]).map((entry) => entry.uuid), [ORIGINAL, DUPLICATE]);
 });
