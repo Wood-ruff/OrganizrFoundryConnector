@@ -1,0 +1,311 @@
+{
+  "abilities": {
+    "str": {
+      "total": 16,
+      "mod": 3
+    },
+    "dex": {
+      "total": 14,
+      "mod": 2
+    },
+    "con": {
+      "total": 14,
+      "mod": 2
+    },
+    "int": {
+      "total": 16,
+      "mod": 3
+    },
+    "wis": {
+      "total": 10,
+      "mod": 0
+    },
+    "cha": {
+      "total": 8,
+      "mod": -1
+    }
+  },
+  "attributes": {
+    "ac": {
+      "normal": {
+        "total": 17
+      },
+      "touch": {
+        "total": 13
+      },
+      "flatFooted": {
+        "total": 15
+      }
+    },
+    "hp": {
+      "max": 42
+    },
+    "bab": {
+      "total": 4
+    },
+    "cmb": {
+      "total": 8
+    },
+    "cmd": {
+      "total": 20
+    },
+    "init": {
+      "total": 2
+    },
+    "savingThrows": {
+      "fort": {
+        "total": 5
+      },
+      "ref": {
+        "total": 3
+      },
+      "will": {
+        "total": 4
+      }
+    },
+    "speed": {
+      "land": {
+        "total": 40
+      }
+    },
+    "spells": {
+      "spellbooks": {
+        "primary": {
+          "inUse": true,
+          "ability": "int",
+          "cl": {
+            "total": 3
+          },
+          "concentration": {
+            "total": 8
+          },
+          "spells": {
+            "spell0": {
+              "max": 4
+            },
+            "spell1": {
+              "max": 4
+            },
+            "spell2": {
+              "max": null
+            },
+            "spell3": {
+              "max": null
+            },
+            "spell4": {
+              "max": null
+            },
+            "spell5": {
+              "max": null
+            },
+            "spell6": {
+              "max": null
+            },
+            "spell7": {
+              "max": null
+            },
+            "spell8": {
+              "max": null
+            },
+            "spell9": {
+              "max": null
+            }
+          }
+        },
+        "secondary": {
+          "inUse": false,
+          "ability": "int",
+          "cl": {
+            "total": 1
+          },
+          "concentration": {
+            "total": 2
+          },
+          "spells": {
+            "spell0": {},
+            "spell1": {},
+            "spell2": {},
+            "spell3": {},
+            "spell4": {},
+            "spell5": {},
+            "spell6": {},
+            "spell7": {},
+            "spell8": {},
+            "spell9": {}
+          }
+        },
+        "tertiary": {
+          "inUse": false,
+          "ability": "int",
+          "cl": {
+            "total": 1
+          },
+          "concentration": {
+            "total": 2
+          },
+          "spells": {
+            "spell0": {},
+            "spell1": {},
+            "spell2": {},
+            "spell3": {},
+            "spell4": {},
+            "spell5": {},
+            "spell6": {},
+            "spell7": {},
+            "spell8": {},
+            "spell9": {}
+          }
+        },
+        "spelllike": {
+          "inUse": false,
+          "ability": "cha",
+          "cl": {
+            "total": 1
+          },
+          "concentration": {
+            "total": 2
+          },
+          "spells": {
+            "spell0": {},
+            "spell1": {},
+            "spell2": {},
+            "spell3": {},
+            "spell4": {},
+            "spell5": {},
+            "spell6": {},
+            "spell7": {},
+            "spell8": {},
+            "spell9": {}
+          }
+        }
+      }
+    }
+  },
+  "details": {
+    "level": {
+      "value": 5
+    }
+  },
+  "skills": {
+    "acr": {
+      "mod": 2
+    },
+    "apr": {
+      "mod": 3
+    },
+    "art": {
+      "mod": 3
+    },
+    "blf": {
+      "mod": -1
+    },
+    "clm": {
+      "mod": 9
+    },
+    "crf": {
+      "mod": 5,
+      "subSkills": {
+        "crf1": {
+          "mod": 8
+        }
+      }
+    },
+    "dip": {
+      "mod": -1
+    },
+    "dev": {
+      "mod": 2
+    },
+    "dis": {
+      "mod": -1
+    },
+    "esc": {
+      "mod": 2
+    },
+    "fly": {
+      "mod": 2
+    },
+    "han": {
+      "mod": -1
+    },
+    "hea": {
+      "mod": 0
+    },
+    "int": {
+      "mod": -1
+    },
+    "kar": {
+      "mod": 8
+    },
+    "kdu": {
+      "mod": 3
+    },
+    "ken": {
+      "mod": 3
+    },
+    "kge": {
+      "mod": 3
+    },
+    "khi": {
+      "mod": 3
+    },
+    "klo": {
+      "mod": 3
+    },
+    "kna": {
+      "mod": 3
+    },
+    "kno": {
+      "mod": 3
+    },
+    "kpl": {
+      "mod": 3
+    },
+    "kre": {
+      "mod": 3
+    },
+    "lin": {
+      "mod": 3
+    },
+    "lor": {
+      "mod": 3
+    },
+    "per": {
+      "mod": 0
+    },
+    "prf": {
+      "mod": -1
+    },
+    "pro": {
+      "mod": 0
+    },
+    "rid": {
+      "mod": 2
+    },
+    "sen": {
+      "mod": 0
+    },
+    "slt": {
+      "mod": 2
+    },
+    "spl": {
+      "mod": 8
+    },
+    "ste": {
+      "mod": 2
+    },
+    "sur": {
+      "mod": 0
+    },
+    "swm": {
+      "mod": 3
+    },
+    "umd": {
+      "mod": -1
+    },
+    "newSkill": {
+      "mod": 4,
+      "custom": true
+    }
+  }
+}
