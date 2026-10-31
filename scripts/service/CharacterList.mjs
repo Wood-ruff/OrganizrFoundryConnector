@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../config/ModuleId.mjs";
+import { isCopiedActor } from "./CharacterSync.mjs";
 
 const OWNER_LEVEL = 3;
 
@@ -13,7 +14,7 @@ export function characterRows(actors, users) {
 
 function characterRow(actor, players) {
   const owners = players.filter((user) => ownsActor(user, actor)).map((user) => user.name);
-  const sync = actor.flags?.[MODULE_ID]?.sync ?? null;
+  const sync = ownSyncFlag(actor);
   return {
     id: actor.id,
     name: actor.name,
@@ -24,6 +25,13 @@ function characterRow(actor, players) {
     synced: sync !== null,
     syncedAt: sync?.syncedAt ?? null
   };
+}
+
+/** The actor's own sync flag; null without one or when a Foundry Duplicate copied it from another actor. */
+function ownSyncFlag(actor) {
+  const sync = actor.flags?.[MODULE_ID]?.sync ?? null;
+  if (sync === null || isCopiedActor(actor)) return null;
+  return sync;
 }
 
 function ownsActor(user, actor) {

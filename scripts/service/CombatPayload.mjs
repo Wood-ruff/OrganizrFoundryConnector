@@ -46,9 +46,9 @@ export function moveActionOf(event) {
   return MOVE_ACTIONS[`${event?.type}:${event?.direction}`] ?? null;
 }
 
-const STATUS_ITEM_TYPES = ["condition", "effect"];
+const STATUS_ITEM_TYPES = ["condition", "effect", "buff"];
 
-/** Whether a changed document can change a combatant's statuses: an active effect, or a pf2e condition/effect item. */
+/** Whether a changed document can change a combatant's statuses: an active effect, a pf2e condition/effect or pf1 buff item. */
 export function isStatusDocument(documentName, type) {
   if (documentName === "ActiveEffect") return true;
   return documentName === "Item" && STATUS_ITEM_TYPES.includes(type);
@@ -159,7 +159,7 @@ function actorEntry(actor) {
     level: actor.level ?? system.details?.level?.value ?? null,
     alliance: actor.alliance ?? null,
     hp: hpOf(actor, system),
-    ac: system.attributes?.ac?.value ?? null,
+    ac: acOf(system),
     speed: speedOf(system),
     saves: savesOf(actor, system),
     statuses: listOf(actor.statuses),
@@ -169,15 +169,25 @@ function actorEntry(actor) {
   };
 }
 
+/** Armor class: pf2e/dnd5e `attributes.ac.value`, pf1 `attributes.ac.normal.total`. */
+function acOf(system) {
+  const ac = system.attributes?.ac ?? null;
+  return ac?.value ?? ac?.normal?.total ?? null;
+}
+
 function listOf(value) {
   if (!value || typeof value[Symbol.iterator] !== "function" || typeof value === "string") return [];
   return [...value];
 }
 
-/** Land speed in feet: pf2e `attributes.speed.value`, dnd5e `attributes.movement.walk`, pf1 `attributes.speed.land.total`. */
+/**
+ * Land speed in feet: pf2e 8 `movement.speeds.land.value` (it deletes the older `attributes.speed`), dnd5e
+ * `attributes.movement.walk`, pf1 `attributes.speed.land.total`.
+ */
 function speedOf(system) {
+  const pf2eLand = system.movement?.speeds?.land?.value;
   const speed = system.attributes?.speed ?? null;
-  return numberOrNull(speed?.total ?? speed?.value ?? speed?.land?.total ?? system.attributes?.movement?.walk);
+  return numberOrNull(pf2eLand ?? speed?.total ?? speed?.value ?? speed?.land?.total ?? system.attributes?.movement?.walk);
 }
 
 /** Fortitude/reflex/will: pf2e `actor.saves.<name>.mod`, pf1 `attributes.savingThrows.<fort|ref|will>.total`, dnd5e con/dex/wis saves. */
@@ -222,7 +232,21 @@ function conditionsOf(actor) {
 }
 
 function effectsOf(actor) {
-  const items = (actor.itemTypes?.effect ?? []).map((item) => ({
+  return [...effectItemsOf(actor), ...activeBuffsOf(actor), ...activeEffectsOf(actor)];
+}
+
+function effectItemsOf(actor) {
+  return (actor.itemTypes?.effect ?? []).map(effectEntry);
+}
+
+/** The pf1 buff items that are switched on (`system.active`), listed like effect items. */
+function activeBuffsOf(actor) {
+  const buffs = (actor.itemTypes?.buff ?? []).filter((item) => Boolean(item.system?.active));
+  return buffs.map(effectEntry);
+}
+
+function effectEntry(item) {
+  return {
     kind: "effect",
     id: item.id ?? null,
     name: item.name ?? null,
@@ -230,8 +254,11 @@ function effectsOf(actor) {
     slug: item.slug ?? null,
     badge: item.badge?.value ?? item.system?.badge?.value ?? null,
     duration: jsonSafe(item.system?.duration ?? null)
-  }));
-  const activeEffects = (actor.effects?.contents ?? []).map((effect) => ({
+  };
+}
+
+function activeEffectsOf(actor) {
+  return (actor.effects?.contents ?? []).map((effect) => ({
     kind: "activeEffect",
     id: effect.id ?? null,
     name: effect.name ?? null,
@@ -239,7 +266,6 @@ function effectsOf(actor) {
     disabled: Boolean(effect.disabled),
     duration: jsonSafe(effect.duration?.toObject?.() ?? effect.duration ?? null)
   }));
-  return [...items, ...activeEffects];
 }
 
 function groupEntries(combat) {

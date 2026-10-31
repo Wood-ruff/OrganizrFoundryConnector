@@ -6,6 +6,7 @@ export function refreshPrompt(name, sheetType) {
 function refreshBodyKey(sheetType) {
   if (sheetType === "loot") return "ORGANIZR.Refresh.LootBody";
   if (sheetType === "npc") return "ORGANIZR.Refresh.ActorBody";
+  if (sheetType === "character") return "ORGANIZR.Refresh.CharacterBody";
   return "ORGANIZR.Refresh.ItemBody";
 }
 
@@ -14,11 +15,15 @@ export function needsBatchConfirm(plan) {
   return plan.refresh.length > 0 || plan.skippedLoot.length > 0;
 }
 
-/** The counts the batch confirm dialog shows; the restore box only when linked loot would be skipped. */
+/**
+ * The counts the batch confirm dialog shows, including the refreshed characters (they take Organizr's items); the
+ * restore box only when linked loot would be skipped.
+ */
 export function batchPrompt(plan) {
   return {
     create: plan.create.length,
     refresh: plan.refresh.length,
+    characters: plan.refresh.filter((sheet) => sheet.type === "character").length,
     skipped: plan.skippedLoot.length,
     showRestore: plan.skippedLoot.length > 0
   };

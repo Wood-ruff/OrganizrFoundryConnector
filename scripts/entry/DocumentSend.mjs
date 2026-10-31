@@ -2,7 +2,7 @@ import {
   fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlagAmong, recordedUuidOf, sendBody,
   sendErrorKey, sendOutcome, sentFlag
 } from "../service/DocumentSend.mjs";
-import { pf1DerivedTotals, sendsDerivedTotals } from "../service/Pf1Totals.mjs";
+import { derivedTotalsFor } from "../service/Pf1Totals.mjs";
 import { sheetFlag } from "../service/SheetImport.mjs";
 import { linkedWorldDocuments } from "./SheetImport.mjs";
 import { isWorldLinked } from "../service/WorldLink.mjs";
@@ -80,7 +80,7 @@ async function send(document, link) {
     uuid: document.uuid,
     itemUuids: itemUuidsOf(document),
     fileId: previous?.fileId ?? null,
-    derivedTotals: derivedTotalsOf(document)
+    derivedTotals: derivedTotalsFor(game.system.id, document)
   });
   if (!fitsSendLimit(body)) {
     ui.notifications.error("ORGANIZR.Send.Errors.TooLarge", { localize: true, format: { name: document.name } });
@@ -96,12 +96,6 @@ async function send(document, link) {
   }
   await document.setFlag(MODULE_ID, "sheet", sentFlag(result, link, previous, document.uuid));
   notifySent(document.name, sendOutcome(result));
-}
-
-/** The totals pf1 derived for a prepared NPC, null for every other document. */
-function derivedTotalsOf(document) {
-  if (!sendsDerivedTotals(game.system.id, document.documentName, document.type)) return null;
-  return pf1DerivedTotals(document.system);
 }
 
 /** Whether the document's sheet flag is its own; asks Organizr for the recorded uuid only when legacy copies compete. */

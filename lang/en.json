@@ -99,6 +99,7 @@
       "Title": "Refresh \"{name}\" from Organizr?",
       "ActorBody": "Replaces stats, strikes, abilities and spells. Keeps the token (image, name, disposition), current HP (in pf1 the damage, nonlethal and temporary HP), spent focus points, spell slots, pf1 item uses and prepared casts, conditions, effects and buffs.",
       "LootBody": "Replaces the name, image and loot settings. Keeps the token and the current inventory and coins unless you tick the box below.",
+      "CharacterBody": "Replaces the character's stats, classes, skills, feats, gear and spells. Keeps the token (image, name, disposition), the damage, nonlethal and temporary HP, wounds and vigor, remaining spell casts, pf1 item uses and prepared casts, conditions, effects and buffs added in Foundry. Items, currency and XP are replaced with Organizr's; send the character to Organizr first to keep changes made in Foundry.",
       "ItemBody": "Replaces this item with the Organizr sheet.",
       "RestoreInventory": "Also restore inventory and coins (puts taken items back)",
       "Confirm": "Refresh",
@@ -106,6 +107,7 @@
       "BatchTitle": "Import all from Organizr?",
       "BatchCounts": "{create} new, {refresh} copies already in this world are refreshed.",
       "BatchKeeps": "Refreshed actors keep their token, current HP (in pf1 the damage, nonlethal and temporary HP), spent focus points, spell slots, pf1 item uses and prepared casts, conditions, effects and buffs; refreshed items are replaced.",
+      "BatchCharacters": "Refreshed characters take Organizr's items, currency and XP; send a character to Organizr first to keep changes made in Foundry.",
       "BatchSkipped": "{count} loot actors already in this world are skipped so taken items do not come back.",
       "BatchConfirm": "Import"
     },

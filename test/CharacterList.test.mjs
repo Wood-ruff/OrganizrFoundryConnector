@@ -49,3 +49,14 @@ test("sync state comes from the module flag on the actor", () => {
   assert.equal(rows[1].synced, false);
   assert.equal(rows[1].syncedAt, null);
 });
+
+test("a sync flag a Duplicate copied from another actor shows the copy as not synced", () => {
+  const sync = { characterFileId: 7, syncedAt: "2026-10-16T12:00:00Z", documentUuid: "Actor.a" };
+  const original = actor({ uuid: "Actor.a", flags: { "organizr-foundry-connector": { sync } } });
+  const copy = actor({ id: "b", uuid: "Actor.b", name: "Hero (Copy)", flags: { "organizr-foundry-connector": { sync } } });
+  const rows = characterRows([original, copy], users);
+  assert.equal(rows[0].synced, true);
+  assert.equal(rows[0].syncedAt, "2026-10-16T12:00:00Z");
+  assert.equal(rows[1].synced, false);
+  assert.equal(rows[1].syncedAt, null);
+});

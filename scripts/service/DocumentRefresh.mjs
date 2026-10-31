@@ -1,6 +1,8 @@
 import {
-  isPf1Data, keepPf1ContainerInventory, keepPf1ItemUses, keepPf1Resources, keepPf1SpellbookSlots
+  isPf1Data, isReplacedPf1Buff, keepPf1BuffStates, keepPf1ContainerInventory, keepPf1ItemUses, keepPf1Resources,
+  keepPf1SpellbookSlots
 } from "./Pf1PlayState.mjs";
+import { MODULE_ID } from "../config/ModuleId.mjs";
 
 const DEFAULT_TOKEN_IMAGE = "icons/svg/mystery-man.svg";
 const PLAY_STATE_ITEM_TYPES = ["condition", "effect", "buff"];
@@ -8,8 +10,9 @@ const SPELLCASTING_ENTRY = "spellcastingEntry";
 
 /**
  * The data that replaces a world document refreshed from Organizr: the incoming document with the current
- * token, HP, spent focus points, uses and spell slots, conditions, effects, buffs and (for loot actors and pf1
- * containers unless restoring) inventory kept. Never mutates its inputs.
+ * token, HP, spent focus points, uses and spell slots, conditions, effects, buffs (a pf1 buff the export brings back
+ * keeps its on/off state) and (for loot actors and pf1 containers unless restoring) inventory kept. Never mutates
+ * its inputs.
  */
 export function refreshedDocument(current, incoming, { restoreInventory = false, tokenFromIncoming = false, keepPlayState = true } = {}) {
   const result = structuredClone(incoming);
@@ -50,14 +53,20 @@ function keepPf1PlayState(result, current) {
   keepPf1Resources(result, current);
   keepPf1SpellbookSlots(result, current);
   keepPf1ItemUses(result.items, current.items);
+  keepPf1BuffStates(result.items, current.items);
 }
 
 function isActorData(data) {
   return Boolean(data) && (data.prototypeToken !== undefined || Array.isArray(data.items));
 }
 
+/** Flags merged per scope, incoming winning; the module's own scope merged per key, so a pushed actor keeps `sync`. */
 function mergedFlags(currentFlags, incomingFlags) {
-  return { ...structuredClone(currentFlags ?? {}), ...structuredClone(incomingFlags ?? {}) };
+  const merged = { ...structuredClone(currentFlags ?? {}), ...structuredClone(incomingFlags ?? {}) };
+  const currentScope = currentFlags?.[MODULE_ID];
+  const incomingScope = incomingFlags?.[MODULE_ID];
+  if (currentScope && incomingScope) merged[MODULE_ID] = { ...structuredClone(currentScope), ...structuredClone(incomingScope) };
+  return merged;
 }
 
 function keptToken(current, incoming, tokenFromIncoming) {
@@ -121,9 +130,16 @@ function clampedTo(value, max) {
 function keptItems(current, incoming, restoreInventory) {
   if (current.type === "loot" && !restoreInventory) return structuredClone(current.items ?? []);
   const incomingItems = structuredClone(incoming?.items ?? []);
+  const playState = currentPlayStateItems(current, incomingItems);
+  return [...incomingItems, ...structuredClone(playState)];
+}
+
+/** Current conditions, effects and buffs the export does not replace (same `_id`; for pf1 also buffs it brings back). */
+function currentPlayStateItems(current, incomingItems) {
   const incomingIds = new Set(incomingItems.map((item) => item._id));
   const playState = (current.items ?? [])
     .filter((item) => PLAY_STATE_ITEM_TYPES.includes(item.type))
     .filter((item) => !incomingIds.has(item._id));
-  return [...incomingItems, ...structuredClone(playState)];
+  if (!isPf1Data(current)) return playState;
+  return playState.filter((item) => !isReplacedPf1Buff(item, incomingItems));
 }

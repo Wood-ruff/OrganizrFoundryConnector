@@ -7,10 +7,16 @@ import {
 
 const documentTypes = { Actor: ["character", "npc", "loot"], Item: ["weapon", "spell", "action"] };
 
-test("only NPC, item, spell, action and loot sheets are importable", () => {
-  for (const type of ["npc", "item", "spell", "action", "loot"]) assert.equal(isImportable(type), true);
+test("NPC, item, spell, action and loot sheets are importable in every system, characters only in pf1e", () => {
+  for (const type of ["npc", "item", "spell", "action", "loot"]) {
+    assert.equal(isImportable(type), true);
+    assert.equal(isImportable(type, "pf2e"), true);
+  }
+  assert.equal(isImportable("character", "pf1e"), true);
+  assert.equal(isImportable("character", "pf2e"), false);
+  assert.equal(isImportable("character", ""), false);
   assert.equal(isImportable("character"), false);
-  assert.equal(isImportable("status"), false);
+  assert.equal(isImportable("status", "pf1e"), false);
   assert.equal(isImportable(undefined), false);
 });
 
@@ -35,9 +41,20 @@ test("linkedIndex lists all copies per file id and skips companions", () => {
   const b = { name: "B", flags: { "organizr-foundry-connector": { sync: { characterFileId: 9 } } } };
   const companion = { name: "Zap", flags: { "organizr-foundry-connector": { sheet: { fileId: 5 }, companion: { fileId: 5, label: "Action: Zap" } } } };
   const index = linkedIndex([a, b, copy, companion, { name: "C" }]);
-  assert.equal(index.size, 1);
+  assert.equal(index.size, 2);
   assert.deepEqual(index.get("5"), [a, copy]);
   assert.equal(index.get("5")[0], a);
+  assert.deepEqual(index.get("9"), [b]);
+});
+
+test("a character pushed to Organizr counts as linked to its file; the sheet flag wins over the sync flag", () => {
+  const pushed = { name: "Pushed", uuid: "Actor.P1", flags: { "organizr-foundry-connector": { sync: { characterFileId: 7, documentUuid: "Actor.P1" } } } };
+  const both = { name: "Both", flags: { "organizr-foundry-connector": { sheet: { fileId: 8 }, sync: { characterFileId: 3 } } } };
+  const unsynced = { name: "Unsynced", flags: { "organizr-foundry-connector": { sync: { characterFileId: null } } } };
+  const index = linkedIndex([pushed, both, unsynced]);
+  assert.deepEqual([...index.keys()], ["7", "8"]);
+  assert.deepEqual(index.get("7"), [pushed]);
+  assert.deepEqual(index.get("8"), [both]);
 });
 
 test("spellsActions14 pickLinked prefers the recorded uuid, else the oldest, and counts duplicates", () => {
@@ -124,4 +141,22 @@ test("i4 withDocumentUuid names the document in a copy of the sheet flag", () =>
   const flag = { fileId: 30, projectId: 12, type: "npc", portraitFileId: null };
   assert.deepEqual(withDocumentUuid(flag, "Actor.npcActor00000001"), { ...flag, documentUuid: "Actor.npcActor00000001" });
   assert.equal(flag.documentUuid, undefined);
+});
+
+test("conn2 a duplicate pushed to its own file is indexed under that file, not the copied sheet flag's", () => {
+  const original = { uuid: "Actor.A", flags: { "organizr-foundry-connector": { sheet: { fileId: 10, documentUuid: "Actor.A" } } } };
+  const pushedCopy = { uuid: "Actor.B", flags: { "organizr-foundry-connector": {
+    sheet: { fileId: 10, documentUuid: "Actor.A" }, sync: { characterFileId: 20, documentUuid: "Actor.B" }
+  } } };
+  const index = linkedIndex([original, pushedCopy]);
+  assert.deepEqual(index.get("10"), [original]);
+  assert.deepEqual(index.get("20"), [pushedCopy]);
+});
+
+test("std8 a plain copy of an imported document still counts as a duplicate, a copied sync flag alone does not", () => {
+  const importedCopy = { uuid: "Actor.C", flags: { "organizr-foundry-connector": { sheet: { fileId: 10, documentUuid: "Actor.A" } } } };
+  const pushedCopy = { uuid: "Actor.D", flags: { "organizr-foundry-connector": { sync: { characterFileId: 20, documentUuid: "Actor.B" } } } };
+  const index = linkedIndex([importedCopy, pushedCopy]);
+  assert.deepEqual([...index.keys()], ["10"]);
+  assert.deepEqual(index.get("10"), [importedCopy]);
 });

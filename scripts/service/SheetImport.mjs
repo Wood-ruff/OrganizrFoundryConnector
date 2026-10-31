@@ -1,7 +1,10 @@
 import { MODULE_ID } from "../config/ModuleId.mjs";
 import { companionFlag } from "./Companions.mjs";
+import { knownFileId } from "./CharacterSync.mjs";
 
 const IMPORTABLE_TYPES = ["npc", "item", "spell", "action", "loot"];
+const CHARACTER_TYPE = "character";
+const EXPORTED_CHARACTER_SYSTEM = "pf1e";
 const DEFAULT_TOKEN_IMAGE = "icons/svg/mystery-man.svg";
 const SYSTEM_DEFAULT_ICON = /^systems\/[^/]+\/icons\/default-icons\//;
 const IMAGE_EXTENSIONS = {
@@ -13,8 +16,9 @@ const IMAGE_EXTENSIONS = {
   "image/svg+xml": "svg"
 };
 
-/** Whether Organizr can export this sheet kind as a Foundry document. */
-export function isImportable(type) {
+/** Whether Organizr can export this sheet kind as a Foundry document; characters only when their system is pf1e. */
+export function isImportable(type, system) {
+  if (type === CHARACTER_TYPE) return system === EXPORTED_CHARACTER_SYSTEM;
   return IMPORTABLE_TYPES.includes(type);
 }
 
@@ -31,12 +35,16 @@ export function documentKind(document, documentTypes) {
   return null;
 }
 
-/** Map of Organizr file id → every world document carrying that sheet flag (companion items excluded). */
+/**
+ * Map of Organizr file id → every world document linked to that file (companion items excluded): a document under the
+ * file its own sheet or sync flag names (`knownFileId`), a Duplicate carrying only another document's sheet flag under
+ * that file as a copy, a Duplicate carrying only another actor's sync flag under none.
+ */
 export function linkedIndex(documents) {
   const index = new Map();
   for (const document of documents ?? []) {
-    const fileId = sheetFlag(document)?.fileId;
-    if (fileId === undefined || fileId === null || companionFlag(document)) continue;
+    const fileId = linkedFileIdOf(document);
+    if (fileId === null || companionFlag(document)) continue;
     const key = String(fileId);
     if (!index.has(key)) index.set(key, []);
     index.get(key).push(document);
@@ -103,6 +111,12 @@ export function importErrorKey(status) {
   if (status === 403) return "ORGANIZR.Browser.Errors.Forbidden";
   if (status === 404) return "ORGANIZR.Browser.Errors.SheetMissing";
   return "ORGANIZR.Browser.Errors.ImportRefused";
+}
+
+function linkedFileIdOf(document) {
+  const ownedFileId = knownFileId(document);
+  if (ownedFileId !== null) return ownedFileId;
+  return sheetFlag(document)?.fileId ?? null;
 }
 
 function tokenFollowsImage(textureSrc, image) {

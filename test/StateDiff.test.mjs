@@ -101,3 +101,17 @@ test("defeated, hidden and initiative changes are reported as scalars", () => {
   assert.deepEqual(changes.initiative, { previous: 17, value: 3 });
 });
 
+
+test("switching a pf1 buff on or off changes the effects and needs a push", () => {
+  const buff = { kind: "effect", id: "b1", name: "Inspired Courage", img: "buff.webp", slug: null, duration: null };
+  const off = stateSnapshot(entry({ actor: { effects: [] } }));
+  const on = stateSnapshot(entry({ actor: { effects: [buff] } }));
+
+  const switchedOn = diffState(off, on);
+  assert.deepEqual(switchedOn.effects.added, [{ kind: "effect", id: "b1", name: "Inspired Courage", slug: null }]);
+  assert.equal(hasChanges(switchedOn), true);
+
+  const switchedOff = diffState(on, off);
+  assert.deepEqual(switchedOff.effects.removed, [{ kind: "effect", id: "b1", name: "Inspired Courage", slug: null }]);
+  assert.equal(hasChanges(switchedOff), true);
+});

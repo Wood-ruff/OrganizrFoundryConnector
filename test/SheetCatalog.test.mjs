@@ -50,6 +50,20 @@ test("groups and projects count their importable sheets and expose their file id
   assert.deepEqual(importableFileIds(projects, 99), []);
 });
 
+test("a character row is importable only when its sheet is pf1e", () => {
+  const characters = [
+    { fileId: 11, projectId: 1, type: "character", name: "Ilva Test", system: "pf1e" },
+    { fileId: 12, projectId: 1, type: "character", name: "Doran Test", system: "pf2e" },
+    { fileId: 13, projectId: 1, type: "character", name: "Nameless Test", system: "" },
+    { fileId: 14, projectId: 1, type: "npc", name: "Bandit Test", system: "pf2e" }
+  ];
+  const [project] = groupSheets(characters);
+  assert.deepEqual(project.types[0].sheets.map((sheet) => sheet.importable), [true, false, false]);
+  assert.equal(project.importableCount, 2);
+  assert.deepEqual(importableFileIds([project], 1, "character"), [11]);
+  assert.equal("system" in project.types[0].sheets[0], false);
+});
+
 test("unknown types get no label key and missing fields default safely", () => {
   const [project] = groupSheets([{ fileId: 7, projectId: 1, type: "weird", name: "X" }]);
   assert.equal(project.types[0].labelKey, null);

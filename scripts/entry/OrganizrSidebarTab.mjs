@@ -1,6 +1,6 @@
 import { combatOverview } from "../service/CombatOverview.mjs";
 import { characterRows } from "../service/CharacterList.mjs";
-import { syncBody, syncErrorKey, syncFlag, syncOutcome } from "../service/CharacterSync.mjs";
+import { isCopiedActor, syncBody, syncErrorKey, syncFlag, syncOutcome } from "../service/CharacterSync.mjs";
 import { isWorldLinked, normalizeWorldLink } from "../service/WorldLink.mjs";
 import { isCollapsed, toggleSection, visibleSectionParts } from "../service/SectionState.mjs";
 import {
@@ -144,6 +144,9 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
 }
 
 async function pushCharacter(actor, link) {
+  if (isCopiedActor(actor)) {
+    ui.notifications.info("ORGANIZR.Send.Copy", { localize: true, format: { name: actor.name } });
+  }
   let result;
   try {
     result = await organizr.pushCharacter(link, syncBody(actor, worldInfo(), (key) => game.i18n.localize(key)));
@@ -152,7 +155,7 @@ async function pushCharacter(actor, link) {
     ui.notifications.error(key, { localize: true, format: { name: actor.name, message: error.message } });
     return;
   }
-  await actor.setFlag(MODULE_ID, "sync", syncFlag(result, link, new Date().toISOString()));
+  await actor.setFlag(MODULE_ID, "sync", syncFlag(result, link, new Date().toISOString(), actor.uuid));
   const outcome = syncOutcome(result);
   ui.notifications.info(outcome.key, { localize: true, format: { name: actor.name, ...outcome.data } });
   for (const note of outcome.notes) {

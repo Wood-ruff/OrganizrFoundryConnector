@@ -454,3 +454,165 @@ test("Import Data applies to pf1 documents", () => {
   assert.equal(importDataApplies("pf1", { system: {} }), true);
   assert.equal(importDataApplies("pf1", {}), true);
 });
+
+function pf1CharacterCurrent() {
+  return {
+    _id: "pcCurrent0000001",
+    name: "Ilva Test",
+    type: "character",
+    img: OLD_PORTRAIT,
+    prototypeToken: { name: "Ilva", actorLink: true, texture: { src: OLD_PORTRAIT } },
+    system: {
+      attributes: {
+        hp: { offset: -12, nonlethal: 3, temp: 5 },
+        spells: { spellbooks: { primary: { name: "Test Wizard", spells: { spell1: { base: 3, value: 1 } } } } }
+      },
+      details: { xp: { value: 9000 } },
+      currency: { pp: 0, gp: 400, sp: 0, cp: 0 }
+    },
+    items: [
+      { _id: "organizrinv00001", name: "Plain Longsword", type: "weapon", system: {} },
+      { _id: "foundryLoot00001", name: "Found Gem", type: "loot", system: {} },
+      { _id: "organizrbuf00001", name: "Test Blessing", type: "buff", system: { active: true } },
+      { _id: "foundryBuff00001", name: "Haste Test", type: "buff", system: { active: true } },
+      { _id: "organizrfea00001", name: "Test Rage", type: "feat", system: { uses: { per: "day", value: 1, maxFormula: "4" } } }
+    ],
+    effects: [{ _id: "condEffect000001", name: "Shaken", statuses: ["shaken"] }],
+    flags: { "organizr-foundry-connector": { sync: { characterFileId: 31, documentUuid: "Actor.pcCurrent0000001" } } },
+    _stats: PF1_STATS
+  };
+}
+
+function pf1CharacterIncoming() {
+  return {
+    name: "Ilva Test",
+    type: "character",
+    img: NEW_PORTRAIT,
+    system: {
+      attributes: { spells: { spellbooks: { primary: { name: "Test Wizard", spells: { spell1: { base: 4 } } } } } },
+      details: { xp: { value: 6000 } },
+      currency: { pp: 0, gp: 12, sp: 0, cp: 0 }
+    },
+    items: [
+      { _id: "organizrinv00001", name: "Plain Longsword", type: "weapon", system: { enh: 1 } },
+      { _id: "organizrbuf00001", name: "Test Blessing", type: "buff", system: { active: false } },
+      { _id: "organizrfea00001", name: "Test Rage", type: "feat", system: { uses: { per: "day", value: 4, maxFormula: "4" } } }
+    ],
+    flags: { "organizr-foundry-connector": { sheet: { fileId: 31, type: "character" } } },
+    _stats: PF1_STATS
+  };
+}
+
+test("a pf1 character refresh keeps HP damage, nonlethal and temp, spell casts, item uses, Foundry buffs and effects", () => {
+  const result = refreshedDocument(pf1CharacterCurrent(), pf1CharacterIncoming());
+  assert.deepEqual(result.system.attributes.hp, { offset: -12, nonlethal: 3, temp: 5 });
+  assert.deepEqual(result.system.attributes.spells.spellbooks.primary.spells.spell1, { base: 4, value: 1 });
+  assert.equal(result.items.find((item) => item._id === "organizrfea00001").system.uses.value, 1);
+  const buffs = result.items.filter((item) => item.type === "buff").map((item) => [item.name, item.system.active]);
+  assert.deepEqual(buffs, [["Test Blessing", true], ["Haste Test", true]]);
+  assert.deepEqual(result.effects.map((effect) => effect.name), ["Shaken"]);
+  assert.equal(result.prototypeToken.actorLink, true);
+});
+
+test("a pf1 character refresh replaces items, currency, XP and the sheet flag with Organizr's", () => {
+  const result = refreshedDocument(pf1CharacterCurrent(), pf1CharacterIncoming());
+  assert.deepEqual(result.items.map((item) => item._id),
+    ["organizrinv00001", "organizrbuf00001", "organizrfea00001", "foundryBuff00001"]);
+  assert.deepEqual(result.items[0].system, { enh: 1 });
+  assert.deepEqual(result.system.currency, { pp: 0, gp: 12, sp: 0, cp: 0 });
+  assert.deepEqual(result.system.details.xp, { value: 6000 });
+  assert.deepEqual(result.flags["organizr-foundry-connector"].sheet, { fileId: 31, type: "character" });
+});
+
+test("a new pf1 character takes the exported state over the blank actor", () => {
+  const blank = { name: "Ilva Test", type: "character", prototypeToken: { actorLink: true }, system: {}, items: [], _stats: PF1_STATS };
+  const result = seededDocument(blank, pf1CharacterIncoming());
+  assert.equal(result.system.attributes.hp, undefined);
+  assert.deepEqual(result.items.map((item) => item._id), ["organizrinv00001", "organizrbuf00001", "organizrfea00001"]);
+  assert.equal(result.items[2].system.uses.value, 4);
+  assert.deepEqual(createSeed(pf1CharacterIncoming()), {
+    name: "Ilva Test", type: "character", flags: { "organizr-foundry-connector": { sheet: { fileId: 31, type: "character" } } }
+  });
+});
+
+test("conn1 a pf1 refresh drops a current buff the export brings back under Organizr's id", () => {
+  const current = pf1CharacterCurrent();
+  current.items.push({ _id: "foundryHaste0001", name: "Quickened Test", type: "buff", system: { active: true } });
+  const incoming = pf1CharacterIncoming();
+  incoming.items.push({ _id: "organizrbuf00002", name: "Quickened Test", type: "buff", system: { active: true } });
+  const result = refreshedDocument(current, incoming);
+  const quickened = result.items.filter((item) => item.name === "Quickened Test");
+  assert.deepEqual(quickened.map((item) => item._id), ["organizrbuf00002"]);
+});
+
+test("s1 a pf1 refresh keeps the on/off state of a buff the export brings back, by id or by name", () => {
+  const current = pf1CharacterCurrent();
+  current.items.push({ _id: "foundryHaste0001", name: "Quickened Test", type: "buff", system: { active: true } });
+  const incoming = pf1CharacterIncoming();
+  incoming.items.push({ _id: "organizrbuf00002", name: "Quickened Test", type: "buff", system: { active: false, level: 2 } });
+  const result = refreshedDocument(current, incoming);
+  const quickened = result.items.find((item) => item.name === "Quickened Test");
+  assert.deepEqual(quickened, { _id: "organizrbuf00002", name: "Quickened Test", type: "buff", system: { active: true, level: 2 } });
+  assert.equal(result.items.find((item) => item._id === "organizrbuf00001").system.active, true);
+});
+
+test("s1 a new pf1 character takes the export's buff state", () => {
+  const blank = { name: "Ilva Test", type: "character", prototypeToken: { actorLink: true }, system: {}, items: [], _stats: PF1_STATS };
+  const result = seededDocument(blank, pf1CharacterIncoming());
+  assert.equal(result.items.find((item) => item.type === "buff").system.active, false);
+});
+
+test("conn1 a pf1 refresh drops current Organizr buffs the export no longer has, keeps Foundry-only buffs", () => {
+  const current = pf1CharacterCurrent();
+  current.items.push({ _id: "organizrbuf00002", name: "Removed Test", type: "buff", system: { active: true } });
+  const result = refreshedDocument(current, pf1CharacterIncoming());
+  const buffs = result.items.filter((item) => item.type === "buff").map((item) => item._id);
+  assert.deepEqual(buffs, ["organizrbuf00001", "foundryBuff00001"]);
+});
+
+test("conn1 a pf2e refresh keeps effects with the same name as an incoming item", () => {
+  const current = { ...npcCurrent(), _stats: { systemId: "pf2e" } };
+  current.items = [{ _id: "organizrbuf00009", name: "Bless", type: "effect", system: {} }];
+  const incoming = npcIncoming();
+  incoming.items = [{ _id: "effectBless00001", name: "Bless", type: "effect", system: {} }];
+  const result = refreshedDocument(current, incoming);
+  assert.deepEqual(result.items.map((item) => item._id), ["effectBless00001", "organizrbuf00009"]);
+});
+
+test("conn3 pf1 item uses and prepared casts follow a unique type and name when the ids differ", () => {
+  const current = pf1CharacterCurrent();
+  current.items = [
+    { _id: "foundryRage00001", name: "Test Rage", type: "feat", system: { uses: { per: "day", value: 1, maxFormula: "4" } } },
+    { _id: "foundrySpel00001", name: "Test Spark", type: "spell", system: { preparation: { value: 0, max: 1 } } }
+  ];
+  const incoming = pf1CharacterIncoming();
+  incoming.items.push({ _id: "organizrspl00001", name: "Test Spark", type: "spell", system: { preparation: { value: 1, max: 1 } } });
+  const result = refreshedDocument(current, incoming);
+  assert.equal(result.items.find((item) => item.name === "Test Rage").system.uses.value, 1);
+  assert.equal(result.items.find((item) => item.name === "Test Spark").system.preparation.value, 0);
+});
+
+test("conn3 a name shared by two current or two incoming items keeps nothing by name", () => {
+  const current = pf1CharacterCurrent();
+  current.items = [
+    { _id: "foundryRage00001", name: "Test Rage", type: "feat", system: { uses: { value: 1 } } },
+    { _id: "foundryRage00002", name: "Test Rage", type: "feat", system: { uses: { value: 2 } } }
+  ];
+  const result = refreshedDocument(current, pf1CharacterIncoming());
+  assert.equal(result.items.find((item) => item.name === "Test Rage").system.uses.value, 4);
+
+  const single = pf1CharacterCurrent();
+  single.items = [{ _id: "foundryRage00001", name: "Test Rage", type: "feat", system: { uses: { value: 1 } } }];
+  const twice = pf1CharacterIncoming();
+  twice.items.push({ _id: "organizrfea00002", name: "Test Rage", type: "feat", system: { uses: { value: 4 } } });
+  const uses = refreshedDocument(single, twice).items.filter((item) => item.name === "Test Rage").map((item) => item.system.uses.value);
+  assert.deepEqual(uses, [4, 4]);
+});
+
+test("open2 a refresh keeps the module's sync flag next to the incoming sheet flag", () => {
+  const result = refreshedDocument(pf1CharacterCurrent(), pf1CharacterIncoming());
+  assert.deepEqual(result.flags[MODULE], {
+    sync: { characterFileId: 31, documentUuid: "Actor.pcCurrent0000001" },
+    sheet: { fileId: 31, type: "character" }
+  });
+});
