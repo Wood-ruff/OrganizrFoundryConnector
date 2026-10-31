@@ -1,23 +1,24 @@
 import {
-  fitsSendLimit, isSendable, ownsSheetFlag, sendBody, sendErrorKey, sendOutcome, sentFlag
+  fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlagAmong, recordedUuidOf, sendBody,
+  sendErrorKey, sendOutcome, sentFlag
 } from "../service/DocumentSend.mjs";
+import { pf1DerivedTotals, sendsDerivedTotals } from "../service/Pf1Totals.mjs";
 import { sheetFlag } from "../service/SheetImport.mjs";
+import { linkedWorldDocuments } from "./SheetImport.mjs";
 import { isWorldLinked } from "../service/WorldLink.mjs";
 import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
+import { contextMenuEntry, directoryEntryId, isWorldDirectory } from "../util/ContextMenuEntry.mjs";
 
 const SEND_ICON = "fa-solid fa-cloud-arrow-up";
-const CONTEXT_MENU_GENERATION = 14;
 
 const organizr = createOrganizrClient();
 const sending = new Set();
 
-/** Adds "Send to Organizr" to the Actors/Items directory context menus (V14) and to actor and item sheet headers. */
+/** Adds "Send to Organizr" to the Actors/Items directory context menus and to actor and item sheet headers. */
 export function registerSendControls() {
-  if (game.release.generation >= CONTEXT_MENU_GENERATION) {
-    Hooks.on("getActorContextOptions", (app, entries) => entries.push(contextEntry((li) => game.actors.get(li.dataset.entryId))));
-    Hooks.on("getItemContextOptions", (app, entries) => entries.push(contextEntry((li) => game.items.get(li.dataset.entryId))));
-  }
+  Hooks.on("getActorContextOptions", (app, entries) => addContextEntry(app, entries, game.actors));
+  Hooks.on("getItemContextOptions", (app, entries) => addContextEntry(app, entries, game.items));
   Hooks.on("getActorSheetHeaderButtons", addHeaderButton);
   Hooks.on("getItemSheetHeaderButtons", addHeaderButton);
 }
@@ -33,13 +34,18 @@ export async function sendToOrganizr(document) {
   }
 }
 
+function addContextEntry(app, entries, worldCollection) {
+  if (!isWorldDirectory(app, worldCollection)) return;
+  entries.push(contextEntry((li) => worldCollection.get(directoryEntryId(li))));
+}
+
 function contextEntry(documentOf) {
-  return {
+  return contextMenuEntry(game.release.generation, {
     label: "ORGANIZR.Send.Action",
     icon: SEND_ICON,
-    visible: (li) => canSend(documentOf(li)),
-    onClick: (event, li) => sendToOrganizr(documentOf(li))
-  };
+    isVisible: (li) => canSend(documentOf(li)),
+    run: (li) => sendToOrganizr(documentOf(li))
+  });
 }
 
 function addHeaderButton(sheet, buttons) {
@@ -50,7 +56,7 @@ function addHeaderButton(sheet, buttons) {
 
 function canSend(document) {
   if (!document || !game.user.isGM || !isWorldLinked(readWorldLink())) return false;
-  return isSendable(sendableView(document), document.documentName);
+  return isSendable(sendableView(document), document.documentName, game.system.id);
 }
 
 function sendableView(document) {
@@ -65,7 +71,7 @@ function sendableView(document) {
 async function send(document, link) {
   const data = document.toObject();
   const flag = sheetFlag(data);
-  const previous = ownsSheetFlag(flag, document.uuid) ? flag : null;
+  const previous = await ownsFlag(document, data, link) ? flag : null;
   if (flag && !previous) {
     ui.notifications.info("ORGANIZR.Send.Copy", { localize: true, format: { name: document.name } });
   }
@@ -73,7 +79,8 @@ async function send(document, link) {
     documentName: document.documentName,
     uuid: document.uuid,
     itemUuids: itemUuidsOf(document),
-    fileId: previous?.fileId ?? null
+    fileId: previous?.fileId ?? null,
+    derivedTotals: derivedTotalsOf(document)
   });
   if (!fitsSendLimit(body)) {
     ui.notifications.error("ORGANIZR.Send.Errors.TooLarge", { localize: true, format: { name: document.name } });
@@ -89,6 +96,48 @@ async function send(document, link) {
   }
   await document.setFlag(MODULE_ID, "sheet", sentFlag(result, link, previous, document.uuid));
   notifySent(document.name, sendOutcome(result));
+}
+
+/** The totals pf1 derived for a prepared NPC, null for every other document. */
+function derivedTotalsOf(document) {
+  if (!sendsDerivedTotals(game.system.id, document.documentName, document.type)) return null;
+  return pf1DerivedTotals(document.system);
+}
+
+/** Whether the document's sheet flag is its own; asks Organizr for the recorded uuid only when legacy copies compete. */
+async function ownsFlag(document, data, link) {
+  const view = copyView(document.uuid, data);
+  const copies = sameKindCopies(document, sheetFlag(data)?.fileId);
+  const recordedUuid = await recordedUuidWhenNeeded(link, view, copies);
+  return ownsSheetFlagAmong(view, copies, recordedUuid);
+}
+
+async function recordedUuidWhenNeeded(link, view, copies) {
+  if (!needsRecordedUuid(legacyFlagCandidates(view, copies))) return null;
+  return recordedUuidFor(link, sheetFlag(view).fileId);
+}
+
+function sameKindCopies(document, fileId) {
+  if (fileId === undefined || fileId === null) return [];
+  const copies = linkedWorldDocuments().get(String(fileId)) ?? [];
+  return copies
+    .filter((copy) => copy.documentName === document.documentName)
+    .map((copy) => copyView(copy.uuid, copy));
+}
+
+function copyView(uuid, source) {
+  return { uuid, flags: source.flags, _stats: { createdTime: source._stats?.createdTime ?? null } };
+}
+
+async function recordedUuidFor(link, fileId) {
+  try {
+    const recordedUuid = recordedUuidOf(await organizr.listSheets(link, link.projectId), fileId);
+    if (!recordedUuid) console.warn(`Organizr connector: no recorded uuid for sheet ${fileId}, the oldest copy owns it`);
+    return recordedUuid;
+  } catch (error) {
+    console.warn("Organizr connector: sheet list not read, the oldest copy owns the sheet flag", error);
+    return null;
+  }
 }
 
 function itemUuidsOf(document) {

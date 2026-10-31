@@ -1,12 +1,15 @@
 import { characterExport } from "./CharacterExport.mjs";
+import { withLocalizedResistanceLabels } from "./RuleLabels.mjs";
 import { MODULE_ID } from "../config/ModuleId.mjs";
 
 /**
  * The request body for the Organizr character endpoint: the export plus the Foundry uuids and,
- * when the actor is already known to Organizr, the file it belongs to.
+ * when the actor is already known to Organizr, the file it belongs to. With a localizer, custom
+ * resistance labels that are pf2e lang keys are sent as their localized text.
  */
-export function syncBody(actor, world) {
-  const data = characterExport(actor, world);
+export function syncBody(actor, world, localize = null) {
+  const exported = characterExport(actor, world);
+  const data = localize ? withLocalizedResistanceLabels(exported, localize) : exported;
   const itemUuids = itemUuidsOf(actor);
   data.uuid = actor.uuid;
   data.items = (data.items ?? []).map((item, index) => withUuid(item, itemUuids, index));

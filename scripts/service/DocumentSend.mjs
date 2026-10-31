@@ -1,30 +1,43 @@
+import { MODULE_ID } from "../config/ModuleId.mjs";
 import { companionFlag } from "./Companions.mjs";
+import { pickLinked, sheetFlag } from "./SheetImport.mjs";
 
 const SENDABLE_ACTOR_TYPES = ["npc", "loot"];
 const SENDABLE_ITEM_TYPES = [
   "spell", "action", "feat",
   "weapon", "armor", "shield", "equipment", "consumable", "treasure", "backpack", "ammo", "book"
 ];
+const PF1_SYSTEM_ID = "pf1";
+const PF1_ONLY_ITEM_TYPES = ["loot", "container"];
 const COIN_CATEGORY = "coin";
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 
 /**
  * Whether "Send to Organizr" applies: world NPC/loot actors and physical, spell, action and feat items (not coins,
- * not the action companions an Organizr item brought along).
+ * not the action companions an Organizr item brought along); pf1 loot and container items only in a pf1 world.
  */
-export function isSendable(data, documentName) {
+export function isSendable(data, documentName, systemId = "") {
   if (!data || data.pack || companionFlag(data)) return false;
   if (documentName === "Actor") return SENDABLE_ACTOR_TYPES.includes(data.type);
   if (documentName !== "Item") return false;
-  if (!SENDABLE_ITEM_TYPES.includes(data.type)) return false;
+  if (!sendableItemTypes(systemId).includes(data.type)) return false;
   return !(data.type === "treasure" && data.system?.category === COIN_CATEGORY);
 }
 
-/** The body of the document endpoint: the source data plus documentName, uuids and the known Organizr file. */
-export function sendBody(data, { documentName, uuid, itemUuids = new Map(), fileId = null }) {
+/**
+ * The body of the document endpoint: the source data plus documentName, uuids, the known Organizr file and, when
+ * given, the totals the system derived. Without a known file (a copy) the body drops the sheet flag, so the server
+ * does not take it for the original's file.
+ */
+export function sendBody(data, { documentName, uuid, itemUuids = new Map(), fileId = null, derivedTotals = null }) {
   const body = { ...structuredClone(data), documentName, uuid };
   if (documentName === "Actor") body.items = (body.items ?? []).map((item) => withItemUuid(item, itemUuids));
-  if (fileId !== null && fileId !== undefined) body.organizr = { fileId: Number(fileId) };
+  if (derivedTotals) body.derivedTotals = structuredClone(derivedTotals);
+  if (fileId !== null && fileId !== undefined) {
+    body.organizr = { fileId: Number(fileId) };
+  } else {
+    dropSheetFlag(body);
+  }
   return body;
 }
 
@@ -41,6 +54,45 @@ export function ownsSheetFlag(flag, documentUuid) {
   if (!flag) return false;
   if (!flag.documentUuid) return true;
   return flag.documentUuid === documentUuid;
+}
+
+/**
+ * The world copies a legacy sheet flag (no documentUuid) could belong to: the same-kind copies carrying a legacy flag
+ * for the same file in world order, the document appended when it is no world copy. Empty when the flag is stamped
+ * or a copy is stamped with its own uuid.
+ */
+export function legacyFlagCandidates(document, sameKindCopies) {
+  const flag = sheetFlag(document);
+  if (!flag || flag.documentUuid) return [];
+  const sameFile = (sameKindCopies ?? []).filter((copy) => isSameFile(copy, flag.fileId));
+  if (sameFile.some(isSelfStamped)) return [];
+  const legacyCopies = sameFile.filter((copy) => !sheetFlag(copy).documentUuid);
+  if (legacyCopies.some((copy) => copy.uuid === document.uuid)) return legacyCopies;
+  return [...legacyCopies, document];
+}
+
+/** Whether picking the owner of a legacy flag needs the uuid Organizr recorded for the file. */
+export function needsRecordedUuid(candidates) {
+  return candidates.length > 1;
+}
+
+/**
+ * Whether a document owns its sheet flag among the world copies of the same file: a stamped flag names the document;
+ * a legacy flag belongs to the copy stamped with its own uuid, else the copy Organizr recorded, else the oldest.
+ */
+export function ownsSheetFlagAmong(document, sameKindCopies, recordedUuid) {
+  const flag = sheetFlag(document);
+  if (!flag || flag.documentUuid) return ownsSheetFlag(flag, document?.uuid);
+  const candidates = legacyFlagCandidates(document, sameKindCopies);
+  if (!candidates.length) return false;
+  return pickLinked(candidates, recordedUuid).target.uuid === document.uuid;
+}
+
+/** The uuid Organizr recorded for a file in its sheet list rows, or null. */
+export function recordedUuidOf(sheetRows, fileId) {
+  if (!Array.isArray(sheetRows)) return null;
+  const row = sheetRows.find((entry) => String(entry?.fileId) === String(fileId));
+  return row?.uuid ?? null;
 }
 
 /** The sheet flag written after a successful send: the document's own uuid, a stored portrait remembered. */
@@ -71,6 +123,26 @@ export function sendErrorKey(status) {
   if (status === 404) return "ORGANIZR.Send.Errors.ProjectNotFound";
   if (status === 400 || status === 422) return "ORGANIZR.Send.Errors.Refused";
   return "ORGANIZR.Send.Errors.ServerError";
+}
+
+function sendableItemTypes(systemId) {
+  if (systemId === PF1_SYSTEM_ID) return [...SENDABLE_ITEM_TYPES, ...PF1_ONLY_ITEM_TYPES];
+  return SENDABLE_ITEM_TYPES;
+}
+
+function isSameFile(copy, fileId) {
+  const copyFileId = sheetFlag(copy)?.fileId;
+  if (copyFileId === undefined || copyFileId === null) return false;
+  return String(copyFileId) === String(fileId) && !companionFlag(copy);
+}
+
+function isSelfStamped(copy) {
+  return sheetFlag(copy).documentUuid === copy.uuid;
+}
+
+function dropSheetFlag(body) {
+  const scope = body.flags?.[MODULE_ID];
+  if (scope?.sheet) delete scope.sheet;
 }
 
 function withItemUuid(item, itemUuids) {

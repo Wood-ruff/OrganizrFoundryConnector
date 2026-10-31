@@ -258,3 +258,199 @@ test("i8 a new document takes the incoming focus points", () => {
 
   assert.deepEqual(seededDocument(created, incoming).system.resources.focus, { value: 2, max: 2 });
 });
+
+const PF1_STATS = { systemId: "pf1", systemVersion: "11.11" };
+
+function pf1NpcCurrent() {
+  return {
+    _id: "pf1Npc0000000001",
+    name: "Reed Stalker",
+    type: "npc",
+    img: "icons/svg/mystery-man.svg",
+    prototypeToken: { name: "Reed Stalker", actorLink: false, texture: { src: "icons/svg/mystery-man.svg" } },
+    system: {
+      attributes: {
+        hp: { temp: 4, nonlethal: 2, offset: -9 },
+        wounds: { offset: -3 },
+        vigor: { temp: 1, offset: -2 },
+        spells: { spellbooks: {
+          primary: { name: "Spells Known", spells: { spell0: { base: 4, value: 1 }, spell1: { base: 3, value: 0 }, spell2: { base: 1 } } },
+          spelllike: { name: "Spell-Like Abilities", spells: { spell0: { base: 0, value: 0 } } }
+        } }
+      }
+    },
+    items: [
+      { _id: "organizratk00001", name: "Claw", type: "attack", system: {} },
+      { _id: "organizrspl00001", name: "Mist Veil", type: "spell", system: { preparation: { value: 0, max: 2 } } },
+      { _id: "organizrspl00002", name: "Glow Mote", type: "spell", system: { uses: { per: "day", value: 1, maxFormula: "3" } } },
+      { _id: "buffInspired0001", name: "Inspired", type: "buff", system: { active: true, subType: "temp" } },
+      { _id: "buffResting00001", name: "Resting", type: "buff", system: { active: false, subType: "temp" } }
+    ],
+    effects: [],
+    flags: {},
+    _stats: PF1_STATS
+  };
+}
+
+function pf1NpcIncoming() {
+  return {
+    name: "Reed Stalker",
+    type: "npc",
+    img: "icons/svg/mystery-man.svg",
+    system: {
+      abilities: { str: { value: 14 } },
+      attributes: {
+        naturalAC: 2,
+        spells: { spellbooks: {
+          primary: { name: "Spells Known", spells: { spell0: { base: 4 }, spell1: { base: 4 }, spell2: { base: 2 } } },
+          secondary: { name: "Spells Prepared", spells: { spell0: { base: 0 } } }
+        } }
+      }
+    },
+    items: [
+      { _id: "organizratk00001", name: "Claw", type: "attack", system: {} },
+      { _id: "organizrspl00001", name: "Mist Veil", type: "spell", system: { preparation: { value: 1, max: 1 } } },
+      { _id: "organizrspl00002", name: "Glow Mote", type: "spell", system: { uses: { per: "day", value: 3, maxFormula: "3" } } },
+      { _id: "organizrspl00003", name: "Fresh Spark", type: "spell", system: { uses: { per: "day", value: 2, maxFormula: "2" } } }
+    ],
+    effects: [],
+    flags: {},
+    _stats: PF1_STATS
+  };
+}
+
+test("a pf1 refresh keeps damage, nonlethal and temporary HP although the export has no attributes.hp", () => {
+  const result = refreshedDocument(pf1NpcCurrent(), pf1NpcIncoming());
+  assert.deepEqual(result.system.attributes.hp, { offset: -9, nonlethal: 2, temp: 4 });
+  assert.deepEqual(result.system.attributes.wounds, { offset: -3 });
+  assert.deepEqual(result.system.attributes.vigor, { offset: -2, temp: 1 });
+  assert.equal(result.system.attributes.naturalAC, 2);
+  assert.deepEqual(result.system.abilities, { str: { value: 14 } });
+});
+
+test("a pf1 refresh creates system.attributes when the export has none and copies only present keys", () => {
+  const current = pf1NpcCurrent();
+  current.system.attributes = { hp: { offset: -5 } };
+  const incoming = pf1NpcIncoming();
+  delete incoming.system;
+  const result = refreshedDocument(current, incoming);
+  assert.deepEqual(result.system, { attributes: { hp: { offset: -5 } } });
+});
+
+test("a pf1 refresh keeps active and inactive buffs with their state", () => {
+  const result = refreshedDocument(pf1NpcCurrent(), pf1NpcIncoming());
+  const buffs = result.items.filter((item) => item.type === "buff");
+  assert.deepEqual(buffs.map((item) => [item.name, item.system.active]), [["Inspired", true], ["Resting", false]]);
+  assert.deepEqual(result.items.map((item) => item._id).slice(0, 4),
+    ["organizratk00001", "organizrspl00001", "organizrspl00002", "organizrspl00003"]);
+});
+
+test("a pf1 refresh keeps the remaining casts per spellbook level of books still exported", () => {
+  const result = refreshedDocument(pf1NpcCurrent(), pf1NpcIncoming());
+  const books = result.system.attributes.spells.spellbooks;
+  assert.deepEqual(books.primary.spells, { spell0: { base: 4, value: 1 }, spell1: { base: 4, value: 0 }, spell2: { base: 2 } });
+  assert.deepEqual(books.secondary.spells, { spell0: { base: 0 } });
+  assert.equal("spelllike" in books, false);
+});
+
+test("a pf1 refresh keeps remaining uses and prepared casts of items present in both, casts up to the new max", () => {
+  const result = refreshedDocument(pf1NpcCurrent(), pf1NpcIncoming());
+  const byId = new Map(result.items.map((item) => [item._id, item]));
+  assert.deepEqual(byId.get("organizrspl00001").system.preparation, { value: 0, max: 1 });
+  assert.deepEqual(byId.get("organizrspl00002").system.uses, { per: "day", value: 1, maxFormula: "3" });
+  assert.deepEqual(byId.get("organizrspl00003").system.uses, { per: "day", value: 2, maxFormula: "2" });
+
+  const current = pf1NpcCurrent();
+  current.items[1].system.preparation = { value: 2, max: 2 };
+  const clamped = refreshedDocument(current, pf1NpcIncoming());
+  assert.deepEqual(clamped.items.find((item) => item._id === "organizrspl00001").system.preparation, { value: 1, max: 1 });
+});
+
+test("a pf1 refresh without keepPlayState takes the incoming state", () => {
+  const result = refreshedDocument(pf1NpcCurrent(), pf1NpcIncoming(), { keepPlayState: false });
+  assert.equal(result.system.attributes.hp, undefined);
+  assert.equal(result.system.attributes.spells.spellbooks.primary.spells.spell0.value, undefined);
+  assert.equal(result.items.find((item) => item._id === "organizrspl00002").system.uses.value, 3);
+});
+
+test("pf1 rules leave a pf2e actor alone: no HP created, uses and buffs untouched", () => {
+  const current = npcCurrent();
+  current._stats = { systemId: "pf2e" };
+  current.system.attributes.hp.offset = -4;
+  current.items.push({ _id: "potionHealing001", name: "Potion", type: "consumable", system: { uses: { value: 0, max: 1 } } });
+  const incoming = npcIncoming();
+  delete incoming.system.attributes;
+  incoming.items.push({ _id: "potionHealing001", name: "Potion", type: "consumable", system: { uses: { value: 1, max: 1 } } });
+  const result = refreshedDocument(current, incoming);
+  assert.equal(result.system.attributes, undefined);
+  assert.equal(result.items.find((item) => item._id === "potionHealing001").system.uses.value, 1);
+});
+
+function pf1ContainerCurrent() {
+  return {
+    _id: "pf1Chest00000001",
+    name: "Sunken Coffer",
+    type: "container",
+    img: "icons/svg/chest.svg",
+    system: {
+      description: { value: "<p>Old text</p>" },
+      items: { organizritm00001: { _id: "organizritm00001", name: "Pearl", type: "loot", system: { quantity: 1 } } },
+      currency: { pp: 0, gp: 3, sp: 0, cp: 0 }
+    },
+    flags: { [MODULE]: { sheet: { fileId: 44 } } },
+    _stats: PF1_STATS
+  };
+}
+
+function pf1ContainerIncoming() {
+  return {
+    name: "Sunken Coffer",
+    type: "container",
+    img: "icons/svg/chest.svg",
+    system: {
+      description: { value: "<p>New text</p>" },
+      items: {
+        organizritm00001: { _id: "organizritm00001", name: "Pearl", type: "loot", system: { quantity: 4 } },
+        organizritm00002: { _id: "organizritm00002", name: "Silver Comb", type: "equipment", system: { quantity: 1 } }
+      },
+      currency: { pp: 1, gp: 40, sp: 5, cp: 0 }
+    },
+    flags: { [MODULE]: { sheet: { fileId: 44, type: "loot" } } },
+    _stats: PF1_STATS
+  };
+}
+
+test("a pf1 container refreshed without restoring keeps its contents and coins", () => {
+  const current = pf1ContainerCurrent();
+  const result = refreshedDocument(current, pf1ContainerIncoming());
+  assert.deepEqual(result.system.items, current.system.items);
+  assert.deepEqual(result.system.currency, { pp: 0, gp: 3, sp: 0, cp: 0 });
+  assert.equal(result.system.description.value, "<p>New text</p>");
+  assert.equal("items" in result, false);
+  assert.equal("prototypeToken" in result, false);
+  result.system.items.organizritm00001.name = "changed";
+  assert.equal(current.system.items.organizritm00001.name, "Pearl");
+});
+
+test("a pf1 container refreshed with restoreInventory takes the exported contents and coins", () => {
+  const result = refreshedDocument(pf1ContainerCurrent(), pf1ContainerIncoming(), { restoreInventory: true });
+  assert.deepEqual(Object.keys(result.system.items), ["organizritm00001", "organizritm00002"]);
+  assert.equal(result.system.items.organizritm00001.system.quantity, 4);
+  assert.deepEqual(result.system.currency, { pp: 1, gp: 40, sp: 5, cp: 0 });
+});
+
+test("container contents stay outside pf1 and for other pf1 item types", () => {
+  const dnd = pf1ContainerCurrent();
+  dnd._stats = { systemId: "dnd5e" };
+  assert.equal(refreshedDocument(dnd, pf1ContainerIncoming()).system.currency.gp, 40);
+
+  const lootCurrentItem = { ...pf1ContainerCurrent(), type: "loot" };
+  const lootIncomingItem = { ...pf1ContainerIncoming(), type: "loot" };
+  assert.equal(refreshedDocument(lootCurrentItem, lootIncomingItem).system.currency.gp, 40);
+});
+
+test("Import Data applies to pf1 documents", () => {
+  assert.equal(importDataApplies("pf1", pf1NpcIncoming()), true);
+  assert.equal(importDataApplies("pf1", { system: {} }), true);
+  assert.equal(importDataApplies("pf1", {}), true);
+});

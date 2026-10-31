@@ -2,7 +2,7 @@ import { combatOverview } from "../service/CombatOverview.mjs";
 import { characterRows } from "../service/CharacterList.mjs";
 import { syncBody, syncErrorKey, syncFlag, syncOutcome } from "../service/CharacterSync.mjs";
 import { isWorldLinked, normalizeWorldLink } from "../service/WorldLink.mjs";
-import { isCollapsed, toggleSection } from "../service/SectionState.mjs";
+import { isCollapsed, toggleSection, visibleSectionParts } from "../service/SectionState.mjs";
 import {
   MODULE_ID, readAutoSendCombat, readCombatSync, readCollapsedSections, readWorldLink,
   writeAutoSendCombat, writeCollapsedSections, writeCombatSync, writeWorldLink
@@ -45,6 +45,10 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
     sync: { template: "modules/organizr-foundry-connector/templates/sync-section.hbs" },
     settings: { template: "modules/organizr-foundry-connector/templates/settings-section.hbs" }
   };
+
+  _configureRenderParts(options) {
+    return visibleSectionParts(super._configureRenderParts(options), game.user.isGM);
+  }
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
@@ -142,7 +146,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
 async function pushCharacter(actor, link) {
   let result;
   try {
-    result = await organizr.pushCharacter(link, syncBody(actor, worldInfo()));
+    result = await organizr.pushCharacter(link, syncBody(actor, worldInfo(), (key) => game.i18n.localize(key)));
   } catch (error) {
     const key = syncErrorKey(error.status ?? -1);
     ui.notifications.error(key, { localize: true, format: { name: actor.name, message: error.message } });

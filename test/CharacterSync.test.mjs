@@ -48,6 +48,20 @@ test("an actor without items yields an empty item list", () => {
   assert.deepEqual(body.items, []);
 });
 
+test("sync body localizes custom resistance labels when a localizer is given", () => {
+  const key = "PF2E.SpecificRule.Equipment.ChannelProtectionAmuletLabel";
+  const exported = [{ _id: "i1", name: "Amulet", system: { rules: [{ key: "Resistance", type: "custom", value: 5, label: key }] } }];
+  const items = [{ id: "i1", uuid: "Actor.A1.Item.i1" }];
+  const localize = (k) => (k === key ? "Channel Protection" : k);
+
+  const localized = syncBody(actor(items, exported), world, localize);
+  assert.equal(localized.items[0].system.rules[0].label, "Channel Protection");
+  assert.equal(localized.items[0].uuid, "Actor.A1.Item.i1");
+
+  const raw = syncBody(actor(items, exported), world);
+  assert.equal(raw.items[0].system.rules[0].label, key);
+});
+
 test("sync flag remembers the Organizr file and where it was pushed", () => {
   const flag = syncFlag({ characterFileId: 7, folderId: 3 }, { serverUrl: "https://o", projectId: "12", apiToken: "org_x" }, "2026-10-16T12:00:00Z");
   assert.deepEqual(flag, { characterFileId: 7, folderId: 3, serverUrl: "https://o", projectId: "12", syncedAt: "2026-10-16T12:00:00Z" });
