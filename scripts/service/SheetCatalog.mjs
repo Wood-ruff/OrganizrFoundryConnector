@@ -70,7 +70,7 @@ function sheetRow(entry) {
   return {
     fileId: entry.fileId,
     type: entry.type ?? "other",
-    importable: isImportable(entry.type),
+    importable: isImportable(entry.type, entry.system),
     name: entry.name ?? "",
     level: entry.level ?? null,
     imageFileId: entry.imageFileId ?? null,

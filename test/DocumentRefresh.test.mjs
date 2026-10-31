@@ -454,3 +454,83 @@ test("Import Data applies to pf1 documents", () => {
   assert.equal(importDataApplies("pf1", { system: {} }), true);
   assert.equal(importDataApplies("pf1", {}), true);
 });
+
+function pf1CharacterCurrent() {
+  return {
+    _id: "pcCurrent0000001",
+    name: "Ilva Test",
+    type: "character",
+    img: OLD_PORTRAIT,
+    prototypeToken: { name: "Ilva", actorLink: true, texture: { src: OLD_PORTRAIT } },
+    system: {
+      attributes: {
+        hp: { offset: -12, nonlethal: 3, temp: 5 },
+        spells: { spellbooks: { primary: { name: "Test Wizard", spells: { spell1: { base: 3, value: 1 } } } } }
+      },
+      details: { xp: { value: 9000 } },
+      currency: { pp: 0, gp: 400, sp: 0, cp: 0 }
+    },
+    items: [
+      { _id: "organizrinv00001", name: "Plain Longsword", type: "weapon", system: {} },
+      { _id: "foundryLoot00001", name: "Found Gem", type: "loot", system: {} },
+      { _id: "organizrbuf00001", name: "Test Blessing", type: "buff", system: { active: true } },
+      { _id: "foundryBuff00001", name: "Haste Test", type: "buff", system: { active: true } },
+      { _id: "organizrfea00001", name: "Test Rage", type: "feat", system: { uses: { per: "day", value: 1, maxFormula: "4" } } }
+    ],
+    effects: [{ _id: "condEffect000001", name: "Shaken", statuses: ["shaken"] }],
+    flags: { "organizr-foundry-connector": { sync: { characterFileId: 31, documentUuid: "Actor.pcCurrent0000001" } } },
+    _stats: PF1_STATS
+  };
+}
+
+function pf1CharacterIncoming() {
+  return {
+    name: "Ilva Test",
+    type: "character",
+    img: NEW_PORTRAIT,
+    system: {
+      attributes: { spells: { spellbooks: { primary: { name: "Test Wizard", spells: { spell1: { base: 4 } } } } } },
+      details: { xp: { value: 6000 } },
+      currency: { pp: 0, gp: 12, sp: 0, cp: 0 }
+    },
+    items: [
+      { _id: "organizrinv00001", name: "Plain Longsword", type: "weapon", system: { enh: 1 } },
+      { _id: "organizrbuf00001", name: "Test Blessing", type: "buff", system: { active: false } },
+      { _id: "organizrfea00001", name: "Test Rage", type: "feat", system: { uses: { per: "day", value: 4, maxFormula: "4" } } }
+    ],
+    flags: { "organizr-foundry-connector": { sheet: { fileId: 31, type: "character" } } },
+    _stats: PF1_STATS
+  };
+}
+
+test("a pf1 character refresh keeps HP damage, nonlethal and temp, spell casts, item uses, Foundry buffs and effects", () => {
+  const result = refreshedDocument(pf1CharacterCurrent(), pf1CharacterIncoming());
+  assert.deepEqual(result.system.attributes.hp, { offset: -12, nonlethal: 3, temp: 5 });
+  assert.deepEqual(result.system.attributes.spells.spellbooks.primary.spells.spell1, { base: 4, value: 1 });
+  assert.equal(result.items.find((item) => item._id === "organizrfea00001").system.uses.value, 1);
+  const buffs = result.items.filter((item) => item.type === "buff").map((item) => [item.name, item.system.active]);
+  assert.deepEqual(buffs, [["Test Blessing", false], ["Haste Test", true]]);
+  assert.deepEqual(result.effects.map((effect) => effect.name), ["Shaken"]);
+  assert.equal(result.prototypeToken.actorLink, true);
+});
+
+test("a pf1 character refresh replaces items, currency, XP and the module flags with Organizr's", () => {
+  const result = refreshedDocument(pf1CharacterCurrent(), pf1CharacterIncoming());
+  assert.deepEqual(result.items.map((item) => item._id),
+    ["organizrinv00001", "organizrbuf00001", "organizrfea00001", "foundryBuff00001"]);
+  assert.deepEqual(result.items[0].system, { enh: 1 });
+  assert.deepEqual(result.system.currency, { pp: 0, gp: 12, sp: 0, cp: 0 });
+  assert.deepEqual(result.system.details.xp, { value: 6000 });
+  assert.deepEqual(result.flags["organizr-foundry-connector"], { sheet: { fileId: 31, type: "character" } });
+});
+
+test("a new pf1 character takes the exported state over the blank actor", () => {
+  const blank = { name: "Ilva Test", type: "character", prototypeToken: { actorLink: true }, system: {}, items: [], _stats: PF1_STATS };
+  const result = seededDocument(blank, pf1CharacterIncoming());
+  assert.equal(result.system.attributes.hp, undefined);
+  assert.deepEqual(result.items.map((item) => item._id), ["organizrinv00001", "organizrbuf00001", "organizrfea00001"]);
+  assert.equal(result.items[2].system.uses.value, 4);
+  assert.deepEqual(createSeed(pf1CharacterIncoming()), {
+    name: "Ilva Test", type: "character", flags: { "organizr-foundry-connector": { sheet: { fileId: 31, type: "character" } } }
+  });
+});

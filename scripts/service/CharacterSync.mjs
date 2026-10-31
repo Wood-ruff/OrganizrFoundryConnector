@@ -2,11 +2,13 @@ import { characterExport } from "./CharacterExport.mjs";
 import { withLocalizedResistanceLabels } from "./RuleLabels.mjs";
 import { MODULE_ID } from "../config/ModuleId.mjs";
 import { ownsSheetFlag } from "./DocumentSend.mjs";
+import { derivedTotalsFor } from "./Pf1Totals.mjs";
 
 /**
  * The request body for the Organizr character endpoint: the export plus the Foundry uuids and,
- * when the actor is already known to Organizr, the file it belongs to. With a localizer, custom
- * resistance labels that are pf2e lang keys are sent as their localized text.
+ * when the actor is already known to Organizr, the file it belongs to; a pf1 character also carries the totals pf1
+ * prepared (`derivedTotals`). With a localizer, custom resistance labels that are pf2e lang keys are sent as their
+ * localized text.
  */
 export function syncBody(actor, world, localize = null) {
   const exported = characterExport(actor, world);
@@ -16,6 +18,8 @@ export function syncBody(actor, world, localize = null) {
   data.items = (data.items ?? []).map((item, index) => withUuid(item, itemUuids, index));
   const fileId = knownFileId(actor);
   if (fileId !== null) data.organizr = { fileId };
+  const derivedTotals = derivedTotalsFor(world.systemId, actor);
+  if (derivedTotals) data.derivedTotals = derivedTotals;
   return data;
 }
 

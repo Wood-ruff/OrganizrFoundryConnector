@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { pf1DerivedTotals, sendsDerivedTotals } from "../scripts/service/Pf1Totals.mjs";
+import { derivedTotalsFor, pf1DerivedTotals, sendsDerivedTotals } from "../scripts/service/Pf1Totals.mjs";
 
 const NPC_KEYS = ["ac", "touchAc", "flatFootedAc", "hp", "bab", "cmb", "cmd", "init", "fort", "ref", "will", "skills"];
 
@@ -181,10 +181,21 @@ test("a skill or sub-skill without a numeric modifier is left out", () => {
   assert.equal("crf.crf2" in skills, false);
 });
 
-test("totals are sent for NPC actors in a pf1 world only", () => {
+test("totals are sent for NPC and character actors in a pf1 world only", () => {
   assert.equal(sendsDerivedTotals("pf1", "Actor", "npc"), true);
-  assert.equal(sendsDerivedTotals("pf1", "Actor", "character"), false);
+  assert.equal(sendsDerivedTotals("pf1", "Actor", "character"), true);
+  assert.equal(sendsDerivedTotals("pf1", "Actor", "basic"), false);
+  assert.equal(sendsDerivedTotals("pf2e", "Actor", "character"), false);
   assert.equal(sendsDerivedTotals("pf1", "Item", "npc"), false);
   assert.equal(sendsDerivedTotals("pf2e", "Actor", "npc"), false);
   assert.equal(sendsDerivedTotals("dnd5e", "Actor", "npc"), false);
+});
+
+test("derivedTotalsFor gives a pf1 character's or NPC's totals and null for anything else", () => {
+  const character = { documentName: "Actor", type: "character", system: preparedCharacter() };
+  assert.deepEqual(derivedTotalsFor("pf1", character), fixture("pf1-character-totals.json"));
+  assert.equal(derivedTotalsFor("pf2e", character), null);
+  assert.equal(derivedTotalsFor("pf1", { ...character, documentName: "Item" }), null);
+  assert.equal(derivedTotalsFor("pf1", { documentName: "Actor", type: "character", system: {} }), null);
+  assert.equal(derivedTotalsFor("pf1", null), null);
 });

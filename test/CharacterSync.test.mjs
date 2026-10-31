@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { isCopiedActor, knownFileId, syncBody, syncErrorKey, syncFlag, syncOutcome } from "../scripts/service/CharacterSync.mjs";
 
 const world = { id: "w", coreVersion: "14.369", systemId: "pf2e", systemVersion: "8.6.0" };
@@ -135,4 +136,27 @@ test("error keys by status", () => {
   assert.equal(syncErrorKey(404), "ORGANIZR.Characters.Errors.ProjectNotFound");
   assert.equal(syncErrorKey(400), "ORGANIZR.Characters.Errors.ServerError");
   assert.equal(syncErrorKey(500), "ORGANIZR.Characters.Errors.ServerError");
+});
+
+function pf1Character(system) {
+  return { ...actor([], []), type: "character", system };
+}
+
+const pf1World = { id: "w1", coreVersion: "13.351", systemId: "pf1", systemVersion: "11.11" };
+
+test("a pf1 character's push body carries the totals pf1 prepared", () => {
+  const system = JSON.parse(readFileSync(new URL("fixtures/pf1-character-system.json", import.meta.url), "utf8"));
+  const totals = JSON.parse(readFileSync(new URL("fixtures/pf1-character-totals.json", import.meta.url), "utf8"));
+
+  const body = syncBody(pf1Character(system), pf1World);
+
+  assert.deepEqual(body.derivedTotals, totals);
+  assert.equal(body.uuid, "Actor.A1");
+});
+
+test("a pf2e character and a pf1 character without numeric totals push without derivedTotals", () => {
+  const system = JSON.parse(readFileSync(new URL("fixtures/pf1-character-system.json", import.meta.url), "utf8"));
+  assert.equal("derivedTotals" in syncBody(pf1Character(system), world), false);
+  assert.equal("derivedTotals" in syncBody(pf1Character({ attributes: {} }), pf1World), false);
+  assert.equal("derivedTotals" in syncBody(actor([], []), world), false);
 });
