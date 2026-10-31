@@ -8,7 +8,7 @@ import { linkedWorldDocuments } from "./SheetImport.mjs";
 import { isWorldLinked } from "../service/WorldLink.mjs";
 import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
-import { contextMenuEntry, directoryEntryId } from "../util/ContextMenuEntry.mjs";
+import { contextMenuEntry, directoryEntryId, isWorldDirectory } from "../util/ContextMenuEntry.mjs";
 
 const SEND_ICON = "fa-solid fa-cloud-arrow-up";
 
@@ -17,8 +17,8 @@ const sending = new Set();
 
 /** Adds "Send to Organizr" to the Actors/Items directory context menus and to actor and item sheet headers. */
 export function registerSendControls() {
-  Hooks.on("getActorContextOptions", (app, entries) => entries.push(contextEntry((li) => game.actors.get(directoryEntryId(li)))));
-  Hooks.on("getItemContextOptions", (app, entries) => entries.push(contextEntry((li) => game.items.get(directoryEntryId(li)))));
+  Hooks.on("getActorContextOptions", (app, entries) => addContextEntry(app, entries, game.actors));
+  Hooks.on("getItemContextOptions", (app, entries) => addContextEntry(app, entries, game.items));
   Hooks.on("getActorSheetHeaderButtons", addHeaderButton);
   Hooks.on("getItemSheetHeaderButtons", addHeaderButton);
 }
@@ -32,6 +32,11 @@ export async function sendToOrganizr(document) {
   } finally {
     sending.delete(document.uuid);
   }
+}
+
+function addContextEntry(app, entries, worldCollection) {
+  if (!isWorldDirectory(app, worldCollection)) return;
+  entries.push(contextEntry((li) => worldCollection.get(directoryEntryId(li))));
 }
 
 function contextEntry(documentOf) {

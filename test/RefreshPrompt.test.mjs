@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { batchPrompt, needsBatchConfirm, refreshPrompt } from "../scripts/service/RefreshPrompt.mjs";
 
 test("npc8 ux2 the single refresh prompt names what an NPC or loot actor keeps; only loot offers the restore box", () => {
@@ -21,4 +22,12 @@ test("loot2 the batch asks only when it refreshes or skips, with the box only fo
   const skipping = { create: [], refresh: [], skippedLoot: [{ fileId: 3 }, { fileId: 4 }] };
   assert.equal(needsBatchConfirm(skipping), true);
   assert.deepEqual(batchPrompt(skipping), { create: 0, refresh: 0, skipped: 2, showRestore: true });
+});
+
+test("P14lang the refresh texts name buffs and the pf1 HP damage among what an actor keeps", async () => {
+  const lang = JSON.parse(await readFile(new URL("../lang/en.json", import.meta.url), "utf8"));
+  for (const text of [lang.ORGANIZR.Refresh.ActorBody, lang.ORGANIZR.Refresh.BatchKeeps]) {
+    assert.match(text, /buffs/);
+    assert.match(text, /pf1/i);
+  }
 });

@@ -15,3 +15,8 @@ export function contextMenuEntry(generation, { label, icon, isVisible, run }) {
 export function directoryEntryId(li) {
   return li?.dataset?.entryId ?? null;
 }
+
+/** Whether a directory hook came from the world directory of `worldCollection`, not from a compendium window. */
+export function isWorldDirectory(app, worldCollection) {
+  return Boolean(app) && app.collection === worldCollection;
+}

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { contextMenuEntry, directoryEntryId } from "../scripts/util/ContextMenuEntry.mjs";
+import { contextMenuEntry, directoryEntryId, isWorldDirectory } from "../scripts/util/ContextMenuEntry.mjs";
 
 function recordingSpec() {
   const calls = [];
@@ -48,4 +48,13 @@ test("the entry id comes from the list element's data-entry-id", () => {
   assert.equal(directoryEntryId({ dataset: { entryId: "actor00000000001" } }), "actor00000000001");
   assert.equal(directoryEntryId({ dataset: {} }), null);
   assert.equal(directoryEntryId(null), null);
+});
+
+test("conn-4 only the world directory of the collection counts, not a compendium window", () => {
+  const worldActors = { documentName: "Actor" };
+  const compendium = { documentName: "Actor", metadata: { id: "world.reed-npcs" } };
+  assert.equal(isWorldDirectory({ collection: worldActors }, worldActors), true);
+  assert.equal(isWorldDirectory({ collection: compendium }, worldActors), false);
+  assert.equal(isWorldDirectory({}, worldActors), false);
+  assert.equal(isWorldDirectory(undefined, worldActors), false);
 });

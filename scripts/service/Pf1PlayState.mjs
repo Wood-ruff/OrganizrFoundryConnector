@@ -22,12 +22,17 @@ export function keepPf1Resources(result, current) {
   }
 }
 
-/** Each spellbook the export still has keeps the remaining casts per spell level (`spells.spellN.value`). */
+/**
+ * Each spellbook the export still has under the same id and name keeps the remaining casts per spell level
+ * (`spells.spellN.value`); the export numbers book ids by position, so a book whose id now names another takes none.
+ */
 export function keepPf1SpellbookSlots(result, current) {
   const currentBooks = current.system?.attributes?.spells?.spellbooks ?? {};
   const resultBooks = result.system?.attributes?.spells?.spellbooks ?? {};
   for (const [bookId, book] of Object.entries(resultBooks)) {
-    const currentLevels = currentBooks[bookId]?.spells ?? {};
+    const currentBook = currentBooks[bookId];
+    if (currentBook?.name !== book?.name) continue;
+    const currentLevels = currentBook?.spells ?? {};
     for (const [levelKey, level] of Object.entries(book?.spells ?? {})) {
       const currentValue = currentLevels[levelKey]?.value;
       if (level && typeof currentValue === "number") level.value = currentValue;
@@ -35,12 +40,15 @@ export function keepPf1SpellbookSlots(result, current) {
   }
 }
 
-/** Items present in both (same `_id`) keep their remaining uses and prepared casts, casts up to the new maximum. */
+/**
+ * Items present in both (same `_id`, type and name) keep their remaining uses and prepared casts, each capped at the
+ * incoming count; the export numbers item ids by position, so an id that now names another item keeps nothing.
+ */
 export function keepPf1ItemUses(items, currentItems) {
   const currentById = new Map((currentItems ?? []).map((item) => [item._id, item]));
   for (const item of items) {
     const currentItem = currentById.get(item._id);
-    if (!currentItem) continue;
+    if (!isSameItem(currentItem, item)) continue;
     keepUses(item.system?.uses, currentItem.system?.uses);
     keepPreparation(item.system?.preparation, currentItem.system?.preparation);
   }
@@ -70,9 +78,15 @@ function attributesOf(result) {
   return result.system.attributes;
 }
 
+function isSameItem(currentItem, item) {
+  if (!currentItem) return false;
+  return currentItem.type === item.type && currentItem.name === item.name;
+}
+
 function keepUses(uses, currentUses) {
   if (!uses || typeof currentUses?.value !== "number") return;
-  uses.value = currentUses.value;
+  const incomingCount = uses.value;
+  uses.value = typeof incomingCount === "number" ? Math.min(currentUses.value, incomingCount) : currentUses.value;
 }
 
 function keepPreparation(preparation, currentPreparation) {

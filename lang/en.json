@@ -97,7 +97,7 @@
     },
     "Refresh": {
       "Title": "Refresh \"{name}\" from Organizr?",
-      "ActorBody": "Replaces stats, strikes, abilities and spells. Keeps the token (image, name, disposition), current HP, spent focus points and spell slots, conditions and effects.",
+      "ActorBody": "Replaces stats, strikes, abilities and spells. Keeps the token (image, name, disposition), current HP (in pf1 the damage, nonlethal and temporary HP), spent focus points, spell slots, pf1 item uses and prepared casts, conditions, effects and buffs.",
       "LootBody": "Replaces the name, image and loot settings. Keeps the token and the current inventory and coins unless you tick the box below.",
       "ItemBody": "Replaces this item with the Organizr sheet.",
       "RestoreInventory": "Also restore inventory and coins (puts taken items back)",
@@ -105,7 +105,7 @@
       "Cancel": "Cancel",
       "BatchTitle": "Import all from Organizr?",
       "BatchCounts": "{create} new, {refresh} copies already in this world are refreshed.",
-      "BatchKeeps": "Refreshed actors keep their token, current HP, spent focus points and spell slots, conditions and effects; refreshed items are replaced.",
+      "BatchKeeps": "Refreshed actors keep their token, current HP (in pf1 the damage, nonlethal and temporary HP), spent focus points, spell slots, pf1 item uses and prepared casts, conditions, effects and buffs; refreshed items are replaced.",
       "BatchSkipped": "{count} loot actors already in this world are skipped so taken items do not come back.",
       "BatchConfirm": "Import"
     },
