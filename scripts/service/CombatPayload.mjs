@@ -232,7 +232,17 @@ function effectsOf(actor) {
 }
 
 function effectItemsOf(actor) {
-  return (actor.itemTypes?.effect ?? []).map((item) => ({
+  return (actor.itemTypes?.effect ?? []).map(effectEntry);
+}
+
+/** The pf1 buff items that are switched on (`system.active`), listed like effect items. */
+function activeBuffsOf(actor) {
+  const buffs = (actor.itemTypes?.buff ?? []).filter((item) => Boolean(item.system?.active));
+  return buffs.map(effectEntry);
+}
+
+function effectEntry(item) {
+  return {
     kind: "effect",
     id: item.id ?? null,
     name: item.name ?? null,
@@ -240,20 +250,7 @@ function effectItemsOf(actor) {
     slug: item.slug ?? null,
     badge: item.badge?.value ?? item.system?.badge?.value ?? null,
     duration: jsonSafe(item.system?.duration ?? null)
-  }));
-}
-
-/** The pf1 buff items that are switched on (`system.active`), listed like effect items. */
-function activeBuffsOf(actor) {
-  const buffs = (actor.itemTypes?.buff ?? []).filter((item) => Boolean(item.system?.active));
-  return buffs.map((item) => ({
-    kind: "effect",
-    id: item.id ?? null,
-    name: item.name ?? null,
-    img: item.img ?? null,
-    slug: item.slug ?? null,
-    duration: jsonSafe(item.system?.duration ?? null)
-  }));
+  };
 }
 
 function activeEffectsOf(actor) {

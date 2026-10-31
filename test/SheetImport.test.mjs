@@ -48,7 +48,7 @@ test("linkedIndex lists all copies per file id and skips companions", () => {
 });
 
 test("a character pushed to Organizr counts as linked to its file; the sheet flag wins over the sync flag", () => {
-  const pushed = { name: "Pushed", flags: { "organizr-foundry-connector": { sync: { characterFileId: 7, documentUuid: "Actor.P1" } } } };
+  const pushed = { name: "Pushed", uuid: "Actor.P1", flags: { "organizr-foundry-connector": { sync: { characterFileId: 7, documentUuid: "Actor.P1" } } } };
   const both = { name: "Both", flags: { "organizr-foundry-connector": { sheet: { fileId: 8 }, sync: { characterFileId: 3 } } } };
   const unsynced = { name: "Unsynced", flags: { "organizr-foundry-connector": { sync: { characterFileId: null } } } };
   const index = linkedIndex([pushed, both, unsynced]);
@@ -141,4 +141,22 @@ test("i4 withDocumentUuid names the document in a copy of the sheet flag", () =>
   const flag = { fileId: 30, projectId: 12, type: "npc", portraitFileId: null };
   assert.deepEqual(withDocumentUuid(flag, "Actor.npcActor00000001"), { ...flag, documentUuid: "Actor.npcActor00000001" });
   assert.equal(flag.documentUuid, undefined);
+});
+
+test("conn2 a duplicate pushed to its own file is indexed under that file, not the copied sheet flag's", () => {
+  const original = { uuid: "Actor.A", flags: { "organizr-foundry-connector": { sheet: { fileId: 10, documentUuid: "Actor.A" } } } };
+  const pushedCopy = { uuid: "Actor.B", flags: { "organizr-foundry-connector": {
+    sheet: { fileId: 10, documentUuid: "Actor.A" }, sync: { characterFileId: 20, documentUuid: "Actor.B" }
+  } } };
+  const index = linkedIndex([original, pushedCopy]);
+  assert.deepEqual(index.get("10"), [original]);
+  assert.deepEqual(index.get("20"), [pushedCopy]);
+});
+
+test("std8 a plain copy of an imported document still counts as a duplicate, a copied sync flag alone does not", () => {
+  const importedCopy = { uuid: "Actor.C", flags: { "organizr-foundry-connector": { sheet: { fileId: 10, documentUuid: "Actor.A" } } } };
+  const pushedCopy = { uuid: "Actor.D", flags: { "organizr-foundry-connector": { sync: { characterFileId: 20, documentUuid: "Actor.B" } } } };
+  const index = linkedIndex([importedCopy, pushedCopy]);
+  assert.deepEqual([...index.keys()], ["10"]);
+  assert.deepEqual(index.get("10"), [importedCopy]);
 });

@@ -221,7 +221,7 @@ test("a pf1 actor's ac is its normal ac total", () => {
 test("active pf1 buffs are listed as effects, inactive ones are not", () => {
   const [entry] = combatPayload(combatWith([pf1Character()]), world, { type: "start", direction: 1 }).combatants;
   assert.deepEqual(entry.actor.effects, [
-    { kind: "effect", id: "b1", name: "Inspired Courage", img: "buff.webp", slug: null, duration: { value: "5", units: "round" } }
+    { kind: "effect", id: "b1", name: "Inspired Courage", img: "buff.webp", slug: null, badge: null, duration: { value: "5", units: "round" } }
   ]);
 });
 

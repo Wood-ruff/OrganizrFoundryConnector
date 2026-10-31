@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../config/ModuleId.mjs";
 import { companionFlag } from "./Companions.mjs";
+import { knownFileId } from "./CharacterSync.mjs";
 
 const IMPORTABLE_TYPES = ["npc", "item", "spell", "action", "loot"];
 const CHARACTER_TYPE = "character";
@@ -35,8 +36,9 @@ export function documentKind(document, documentTypes) {
 }
 
 /**
- * Map of Organizr file id → every world document carrying that sheet flag, or the sync flag of a character pushed to
- * that file (companion items excluded).
+ * Map of Organizr file id → every world document linked to that file (companion items excluded): a document under the
+ * file its own sheet or sync flag names (`knownFileId`), a Duplicate carrying only another document's sheet flag under
+ * that file as a copy, a Duplicate carrying only another actor's sync flag under none.
  */
 export function linkedIndex(documents) {
   const index = new Map();
@@ -112,8 +114,9 @@ export function importErrorKey(status) {
 }
 
 function linkedFileIdOf(document) {
-  const flags = document?.flags?.[MODULE_ID] ?? {};
-  return flags.sheet?.fileId ?? flags.sync?.characterFileId ?? null;
+  const ownedFileId = knownFileId(document);
+  if (ownedFileId !== null) return ownedFileId;
+  return sheetFlag(document)?.fileId ?? null;
 }
 
 function tokenFollowsImage(textureSrc, image) {

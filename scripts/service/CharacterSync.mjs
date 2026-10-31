@@ -37,9 +37,13 @@ export function knownFileId(actor) {
 
 /** Whether the actor carries an Organizr file flag that belongs to another actor it was duplicated from. */
 export function isCopiedActor(actor) {
-  const flags = actor.flags?.[MODULE_ID] ?? {};
-  const flaggedFileId = flags.sheet?.fileId ?? flags.sync?.characterFileId ?? null;
-  return flaggedFileId !== null && knownFileId(actor) === null;
+  return flaggedFileId(actor) !== null && knownFileId(actor) === null;
+}
+
+/** The Organizr file the sheet flag, else the sync flag names, whichever document the flags belong to; or null. */
+export function flaggedFileId(document) {
+  const flags = document?.flags?.[MODULE_ID] ?? {};
+  return flags.sheet?.fileId ?? flags.sync?.characterFileId ?? null;
 }
 
 /** What the module remembers on the actor after a successful push. */

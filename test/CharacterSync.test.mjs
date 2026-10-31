@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { isCopiedActor, knownFileId, syncBody, syncErrorKey, syncFlag, syncOutcome } from "../scripts/service/CharacterSync.mjs";
+import { flaggedFileId, isCopiedActor, knownFileId, syncBody, syncErrorKey, syncFlag, syncOutcome } from "../scripts/service/CharacterSync.mjs";
 
 const world = { id: "w", coreVersion: "14.369", systemId: "pf2e", systemVersion: "8.6.0" };
 
@@ -159,4 +159,12 @@ test("a pf2e character and a pf1 character without numeric totals push without d
   assert.equal("derivedTotals" in syncBody(pf1Character(system), world), false);
   assert.equal("derivedTotals" in syncBody(pf1Character({ attributes: {} }), pf1World), false);
   assert.equal("derivedTotals" in syncBody(actor([], []), world), false);
+});
+
+test("std8 flaggedFileId reads the sheet flag's file, else the sync flag's, whoever owns them", () => {
+  const copied = { sheet: { fileId: 5, documentUuid: "Actor.A1" }, sync: { characterFileId: 9, documentUuid: "Actor.A1" } };
+  assert.equal(flaggedFileId(flagged("Actor.B2", copied)), 5);
+  assert.equal(flaggedFileId(flagged("Actor.B2", { sync: { characterFileId: 9, documentUuid: "Actor.A1" } })), 9);
+  assert.equal(flaggedFileId(flagged("Actor.B2", { sync: { characterFileId: null } })), null);
+  assert.equal(flaggedFileId({ uuid: "Actor.B2" }), null);
 });
