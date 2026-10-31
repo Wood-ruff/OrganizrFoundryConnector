@@ -142,7 +142,7 @@ export class OrganizrSidebarTab extends HandlebarsApplicationMixin(AbstractSideb
 async function pushCharacter(actor, link) {
   let result;
   try {
-    result = await organizr.pushCharacter(link, syncBody(actor, worldInfo()));
+    result = await organizr.pushCharacter(link, syncBody(actor, worldInfo(), (key) => game.i18n.localize(key)));
   } catch (error) {
     const key = syncErrorKey(error.status ?? -1);
     ui.notifications.error(key, { localize: true, format: { name: actor.name, message: error.message } });
