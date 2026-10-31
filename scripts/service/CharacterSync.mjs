@@ -1,6 +1,7 @@
 import { characterExport } from "./CharacterExport.mjs";
 import { withLocalizedResistanceLabels } from "./RuleLabels.mjs";
 import { MODULE_ID } from "../config/ModuleId.mjs";
+import { ownsSheetFlag } from "./DocumentSend.mjs";
 
 /**
  * The request body for the Organizr character endpoint: the export plus the Foundry uuids and,
@@ -18,20 +19,34 @@ export function syncBody(actor, world, localize = null) {
   return data;
 }
 
-/** The Organizr file this actor was imported from or last pushed to, or null. */
+/**
+ * The Organizr file this actor was imported from or last pushed to, or null. A flag a Foundry Duplicate copied
+ * from another actor (its documentUuid names that actor) does not count; a token actor answers for its base actor.
+ */
 export function knownFileId(actor) {
   const flags = actor.flags?.[MODULE_ID] ?? {};
-  return flags.sheet?.fileId ?? flags.sync?.characterFileId ?? null;
+  const ownerUuid = flagOwnerUuid(actor);
+  const sheetFileId = ownsSheetFlag(flags.sheet, ownerUuid) ? flags.sheet.fileId : null;
+  const syncFileId = ownsSheetFlag(flags.sync, ownerUuid) ? flags.sync.characterFileId : null;
+  return sheetFileId ?? syncFileId ?? null;
+}
+
+/** Whether the actor carries an Organizr file flag that belongs to another actor it was duplicated from. */
+export function isCopiedActor(actor) {
+  const flags = actor.flags?.[MODULE_ID] ?? {};
+  const flaggedFileId = flags.sheet?.fileId ?? flags.sync?.characterFileId ?? null;
+  return flaggedFileId !== null && knownFileId(actor) === null;
 }
 
 /** What the module remembers on the actor after a successful push. */
-export function syncFlag(result, link, syncedAt) {
+export function syncFlag(result, link, syncedAt, documentUuid) {
   return {
     characterFileId: result.characterFileId,
     folderId: result.folderId,
     serverUrl: link.serverUrl,
     projectId: link.projectId,
-    syncedAt
+    syncedAt,
+    documentUuid: documentUuid ?? null
   };
 }
 
@@ -49,6 +64,12 @@ export function syncErrorKey(status) {
   if (status === 403) return "ORGANIZR.Characters.Errors.WrongProject";
   if (status === 404) return "ORGANIZR.Characters.Errors.ProjectNotFound";
   return "ORGANIZR.Characters.Errors.ServerError";
+}
+
+/** The uuid a flag is stamped with: the world actor's own, the base actor's for a token actor. */
+function flagOwnerUuid(actor) {
+  if (!actor.isToken) return actor.uuid;
+  return actor.token?.baseActor?.uuid ?? `Actor.${actor.id}`;
 }
 
 function itemUuidsOf(actor) {

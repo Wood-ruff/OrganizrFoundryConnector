@@ -170,10 +170,11 @@ test("moveActionOf maps turn and round events to Organizr's move actions", () =>
   assert.equal(moveActionOf(undefined), null);
 });
 
-test("status documents are active effects and pf2e condition/effect items", () => {
+test("status documents are active effects, pf2e condition/effect items and pf1 buffs", () => {
   assert.equal(isStatusDocument("ActiveEffect", undefined), true);
   assert.equal(isStatusDocument("Item", "condition"), true);
   assert.equal(isStatusDocument("Item", "effect"), true);
+  assert.equal(isStatusDocument("Item", "buff"), true);
   assert.equal(isStatusDocument("Item", "weapon"), false);
   assert.equal(isStatusDocument("Actor", "npc"), false);
 });
@@ -184,4 +185,49 @@ test("combatantOfActor finds the combatant by actor uuid", () => {
   assert.equal(combatantOfActor(combatants, { uuid: "Actor.Zz" }), null);
   assert.equal(combatantOfActor(combatants, null), null);
   assert.equal(combatantOfActor(new Set(combatants), { uuid: "Actor.A1" }).id, "c0");
+});
+
+function pf1Character() {
+  return {
+    id: "P1", uuid: "Actor.P1", type: "character", name: "Tamsin Reedwater",
+    flags: { "organizr-foundry-connector": { sync: { characterFileId: 31, documentUuid: "Actor.P1" } } },
+    system: {
+      attributes: {
+        hp: { value: 20, max: 42, temp: 0 },
+        ac: { normal: { total: 17 }, touch: { total: 13 }, flatFooted: { total: 15 } },
+        speed: { land: { total: 40 } },
+        savingThrows: { fort: { total: 5 }, ref: { total: 3 }, will: { total: 4 } }
+      },
+      details: { level: { value: 4 } }
+    },
+    statuses: new Set(),
+    itemTypes: {
+      buff: [
+        { id: "b1", name: "Inspired Courage", img: "buff.webp", system: { active: true, duration: { value: "5", units: "round" } } },
+        { id: "b2", name: "Shield of Faith", img: "sof.webp", system: { active: false, duration: { value: "1", units: "minute" } } }
+      ]
+    },
+    effects: { contents: [] }
+  };
+}
+
+test("a pf1 actor's ac is its normal ac total", () => {
+  const [entry] = combatPayload(combatWith([pf1Character()]), world, { type: "start", direction: 1 }).combatants;
+  assert.equal(entry.actor.ac, 17);
+  assert.equal(entry.actor.speed, 40);
+  assert.deepEqual(entry.actor.saves, { fortitude: 5, reflex: 3, will: 4 });
+});
+
+test("active pf1 buffs are listed as effects, inactive ones are not", () => {
+  const [entry] = combatPayload(combatWith([pf1Character()]), world, { type: "start", direction: 1 }).combatants;
+  assert.deepEqual(entry.actor.effects, [
+    { kind: "effect", id: "b1", name: "Inspired Courage", img: "buff.webp", slug: null, duration: { value: "5", units: "round" } }
+  ]);
+});
+
+test("the combat file id ignores a flag copied from another actor", () => {
+  const copy = { ...pf1Character(), id: "P2", uuid: "Actor.P2" };
+  const [original, duplicate] = combatPayload(combatWith([pf1Character(), copy]), world, { type: "start", direction: 1 }).combatants;
+  assert.equal(original.actor.organizrFileId, 31);
+  assert.equal(duplicate.actor.organizrFileId, null);
 });

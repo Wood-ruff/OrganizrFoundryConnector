@@ -46,9 +46,9 @@ export function moveActionOf(event) {
   return MOVE_ACTIONS[`${event?.type}:${event?.direction}`] ?? null;
 }
 
-const STATUS_ITEM_TYPES = ["condition", "effect"];
+const STATUS_ITEM_TYPES = ["condition", "effect", "buff"];
 
-/** Whether a changed document can change a combatant's statuses: an active effect, or a pf2e condition/effect item. */
+/** Whether a changed document can change a combatant's statuses: an active effect, a pf2e condition/effect or pf1 buff item. */
 export function isStatusDocument(documentName, type) {
   if (documentName === "ActiveEffect") return true;
   return documentName === "Item" && STATUS_ITEM_TYPES.includes(type);
@@ -159,7 +159,7 @@ function actorEntry(actor) {
     level: actor.level ?? system.details?.level?.value ?? null,
     alliance: actor.alliance ?? null,
     hp: hpOf(actor, system),
-    ac: system.attributes?.ac?.value ?? null,
+    ac: acOf(system),
     speed: speedOf(system),
     saves: savesOf(actor, system),
     statuses: listOf(actor.statuses),
@@ -167,6 +167,12 @@ function actorEntry(actor) {
     effects: effectsOf(actor),
     traits: listOf(actor.traits)
   };
+}
+
+/** Armor class: pf2e/dnd5e `attributes.ac.value`, pf1 `attributes.ac.normal.total`. */
+function acOf(system) {
+  const ac = system.attributes?.ac ?? null;
+  return ac?.value ?? ac?.normal?.total ?? null;
 }
 
 function listOf(value) {
@@ -222,7 +228,11 @@ function conditionsOf(actor) {
 }
 
 function effectsOf(actor) {
-  const items = (actor.itemTypes?.effect ?? []).map((item) => ({
+  return [...effectItemsOf(actor), ...activeBuffsOf(actor), ...activeEffectsOf(actor)];
+}
+
+function effectItemsOf(actor) {
+  return (actor.itemTypes?.effect ?? []).map((item) => ({
     kind: "effect",
     id: item.id ?? null,
     name: item.name ?? null,
@@ -231,7 +241,23 @@ function effectsOf(actor) {
     badge: item.badge?.value ?? item.system?.badge?.value ?? null,
     duration: jsonSafe(item.system?.duration ?? null)
   }));
-  const activeEffects = (actor.effects?.contents ?? []).map((effect) => ({
+}
+
+/** The pf1 buff items that are switched on (`system.active`), listed like effect items. */
+function activeBuffsOf(actor) {
+  const buffs = (actor.itemTypes?.buff ?? []).filter((item) => Boolean(item.system?.active));
+  return buffs.map((item) => ({
+    kind: "effect",
+    id: item.id ?? null,
+    name: item.name ?? null,
+    img: item.img ?? null,
+    slug: item.slug ?? null,
+    duration: jsonSafe(item.system?.duration ?? null)
+  }));
+}
+
+function activeEffectsOf(actor) {
+  return (actor.effects?.contents ?? []).map((effect) => ({
     kind: "activeEffect",
     id: effect.id ?? null,
     name: effect.name ?? null,
@@ -239,7 +265,6 @@ function effectsOf(actor) {
     disabled: Boolean(effect.disabled),
     duration: jsonSafe(effect.duration?.toObject?.() ?? effect.duration ?? null)
   }));
-  return [...items, ...activeEffects];
 }
 
 function groupEntries(combat) {
