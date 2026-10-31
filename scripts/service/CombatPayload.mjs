@@ -180,10 +180,14 @@ function listOf(value) {
   return [...value];
 }
 
-/** Land speed in feet: pf2e `attributes.speed.value`, dnd5e `attributes.movement.walk`, pf1 `attributes.speed.land.total`. */
+/**
+ * Land speed in feet: pf2e 8 `movement.speeds.land.value` (it deletes the older `attributes.speed`), dnd5e
+ * `attributes.movement.walk`, pf1 `attributes.speed.land.total`.
+ */
 function speedOf(system) {
+  const pf2eLand = system.movement?.speeds?.land?.value;
   const speed = system.attributes?.speed ?? null;
-  return numberOrNull(speed?.total ?? speed?.value ?? speed?.land?.total ?? system.attributes?.movement?.walk);
+  return numberOrNull(pf2eLand ?? speed?.total ?? speed?.value ?? speed?.land?.total ?? system.attributes?.movement?.walk);
 }
 
 /** Fortitude/reflex/will: pf2e `actor.saves.<name>.mod`, pf1 `attributes.savingThrows.<fort|ref|will>.total`, dnd5e con/dex/wis saves. */

@@ -1,9 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { keepPf1ItemUses, keepPf1SpellbookSlots } from "../scripts/service/Pf1PlayState.mjs";
+import { keepPf1BuffStates, keepPf1ItemUses, keepPf1SpellbookSlots } from "../scripts/service/Pf1PlayState.mjs";
 
 function spell(id, name, preparation) {
   return { _id: id, name, type: "spell", system: { preparation } };
+}
+
+function buff(id, name, active) {
+  return { _id: id, name, type: "buff", system: { active, level: 1 } };
 }
 
 function wand(id, name, uses) {
@@ -83,4 +87,46 @@ test("a spellbook with the same id and name keeps its remaining casts", () => {
   } } } } };
   keepPf1SpellbookSlots(result, current);
   assert.deepEqual(result.system.attributes.spells.spellbooks.primary.spells.spell1, { base: 4, value: 1 });
+});
+
+test("s1 an exported buff switched on in Foundry stays on when the export brings it back", () => {
+  const current = [buff("organizrbuf00001", "Test Blessing", true)];
+  const incoming = [buff("organizrbuf00001", "Test Blessing", false)];
+  incoming[0].system.level = 3;
+  keepPf1BuffStates(incoming, current);
+  assert.deepEqual(incoming[0].system, { active: true, level: 3 });
+});
+
+test("s1 a buff switched off in Foundry stays off", () => {
+  const current = [buff("organizrbuf00001", "Test Blessing", false)];
+  const incoming = [buff("organizrbuf00001", "Test Blessing", true)];
+  keepPf1BuffStates(incoming, current);
+  assert.equal(incoming[0].system.active, false);
+});
+
+test("s1 a Foundry buff the export brings back under Organizr's id hands over its state by name", () => {
+  const current = [buff("foundryHaste0001", "Quickened Test", true)];
+  const incoming = [buff("organizrbuf00002", "Quickened Test", false)];
+  keepPf1BuffStates(incoming, current);
+  assert.equal(incoming[0].system.active, true);
+});
+
+test("s1 a removed buff does not hand its state to the buff that takes over its id", () => {
+  const current = [buff("organizrbuf00001", "Test Blessing", true), buff("organizrbuf00002", "Test Ward", false)];
+  const incoming = [buff("organizrbuf00001", "Test Ward", true), buff("organizrbuf00002", "Fresh Test", true)];
+  keepPf1BuffStates(incoming, current);
+  assert.deepEqual(incoming.map((item) => item.system.active), [false, true]);
+});
+
+test("s1 only buffs carry their state, and a current buff without a state leaves the incoming one", () => {
+  const current = [
+    { _id: "organizrfea00001", name: "Test Rage", type: "feat", system: { active: true } },
+    { _id: "organizrbuf00001", name: "Test Blessing", type: "buff", system: {} }
+  ];
+  const incoming = [
+    { _id: "organizrfea00001", name: "Test Rage", type: "feat", system: { active: false } },
+    buff("organizrbuf00001", "Test Blessing", false)
+  ];
+  keepPf1BuffStates(incoming, current);
+  assert.deepEqual(incoming.map((item) => item.system.active), [false, false]);
 });

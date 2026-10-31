@@ -211,6 +211,14 @@ function pf1Character() {
   };
 }
 
+test("a pf2e 8 actor's speed is its derived land speed under movement", () => {
+  const actor = pf2eActor();
+  delete actor.system.attributes.speed;
+  actor.system.movement = { speeds: { land: { value: 20, base: 25 }, fly: null } };
+  const [entry] = combatPayload(combatWith([actor]), world, { type: "start", direction: 1 }).combatants;
+  assert.equal(entry.actor.speed, 20);
+});
+
 test("a pf1 actor's ac is its normal ac total", () => {
   const [entry] = combatPayload(combatWith([pf1Character()]), world, { type: "start", direction: 1 }).combatants;
   assert.equal(entry.actor.ac, 17);

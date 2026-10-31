@@ -1,5 +1,6 @@
 import {
-  isPf1Data, isReplacedPf1Buff, keepPf1ContainerInventory, keepPf1ItemUses, keepPf1Resources, keepPf1SpellbookSlots
+  isPf1Data, isReplacedPf1Buff, keepPf1BuffStates, keepPf1ContainerInventory, keepPf1ItemUses, keepPf1Resources,
+  keepPf1SpellbookSlots
 } from "./Pf1PlayState.mjs";
 import { MODULE_ID } from "../config/ModuleId.mjs";
 
@@ -9,8 +10,9 @@ const SPELLCASTING_ENTRY = "spellcastingEntry";
 
 /**
  * The data that replaces a world document refreshed from Organizr: the incoming document with the current
- * token, HP, spent focus points, uses and spell slots, conditions, effects, buffs and (for loot actors and pf1
- * containers unless restoring) inventory kept. Never mutates its inputs.
+ * token, HP, spent focus points, uses and spell slots, conditions, effects, buffs (a pf1 buff the export brings back
+ * keeps its on/off state) and (for loot actors and pf1 containers unless restoring) inventory kept. Never mutates
+ * its inputs.
  */
 export function refreshedDocument(current, incoming, { restoreInventory = false, tokenFromIncoming = false, keepPlayState = true } = {}) {
   const result = structuredClone(incoming);
@@ -51,6 +53,7 @@ function keepPf1PlayState(result, current) {
   keepPf1Resources(result, current);
   keepPf1SpellbookSlots(result, current);
   keepPf1ItemUses(result.items, current.items);
+  keepPf1BuffStates(result.items, current.items);
 }
 
 function isActorData(data) {

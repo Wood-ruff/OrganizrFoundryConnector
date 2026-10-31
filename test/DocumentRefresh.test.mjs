@@ -509,7 +509,7 @@ test("a pf1 character refresh keeps HP damage, nonlethal and temp, spell casts, 
   assert.deepEqual(result.system.attributes.spells.spellbooks.primary.spells.spell1, { base: 4, value: 1 });
   assert.equal(result.items.find((item) => item._id === "organizrfea00001").system.uses.value, 1);
   const buffs = result.items.filter((item) => item.type === "buff").map((item) => [item.name, item.system.active]);
-  assert.deepEqual(buffs, [["Test Blessing", false], ["Haste Test", true]]);
+  assert.deepEqual(buffs, [["Test Blessing", true], ["Haste Test", true]]);
   assert.deepEqual(result.effects.map((effect) => effect.name), ["Shaken"]);
   assert.equal(result.prototypeToken.actorLink, true);
 });
@@ -543,6 +543,23 @@ test("conn1 a pf1 refresh drops a current buff the export brings back under Orga
   const result = refreshedDocument(current, incoming);
   const quickened = result.items.filter((item) => item.name === "Quickened Test");
   assert.deepEqual(quickened.map((item) => item._id), ["organizrbuf00002"]);
+});
+
+test("s1 a pf1 refresh keeps the on/off state of a buff the export brings back, by id or by name", () => {
+  const current = pf1CharacterCurrent();
+  current.items.push({ _id: "foundryHaste0001", name: "Quickened Test", type: "buff", system: { active: true } });
+  const incoming = pf1CharacterIncoming();
+  incoming.items.push({ _id: "organizrbuf00002", name: "Quickened Test", type: "buff", system: { active: false, level: 2 } });
+  const result = refreshedDocument(current, incoming);
+  const quickened = result.items.find((item) => item.name === "Quickened Test");
+  assert.deepEqual(quickened, { _id: "organizrbuf00002", name: "Quickened Test", type: "buff", system: { active: true, level: 2 } });
+  assert.equal(result.items.find((item) => item._id === "organizrbuf00001").system.active, true);
+});
+
+test("s1 a new pf1 character takes the export's buff state", () => {
+  const blank = { name: "Ilva Test", type: "character", prototypeToken: { actorLink: true }, system: {}, items: [], _stats: PF1_STATS };
+  const result = seededDocument(blank, pf1CharacterIncoming());
+  assert.equal(result.items.find((item) => item.type === "buff").system.active, false);
 });
 
 test("conn1 a pf1 refresh drops current Organizr buffs the export no longer has, keeps Foundry-only buffs", () => {

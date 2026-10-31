@@ -69,6 +69,24 @@ export function isReplacedPf1Buff(item, incomingItems) {
   return (incomingItems ?? []).some((incoming) => incoming.type === BUFF_TYPE && incoming.name === item.name);
 }
 
+/**
+ * A buff the export brings back keeps its current on/off state (`system.active`), matched like the uses: same `_id`,
+ * type and name, else a type and name unique on both sides; Foundry-only buffs are kept whole elsewhere.
+ */
+export function keepPf1BuffStates(items, currentItems) {
+  const currentById = new Map((currentItems ?? []).map((item) => [item._id, item]));
+  const currentByName = uniqueByTypeAndName(currentItems);
+  const incomingByName = uniqueByTypeAndName(items);
+  for (const item of items) {
+    if (item.type !== BUFF_TYPE) continue;
+    const currentItem = matchingCurrentItem(item, currentById, currentByName, incomingByName);
+    const currentActive = currentItem?.system?.active;
+    if (typeof currentActive !== "boolean") continue;
+    item.system = item.system ?? {};
+    item.system.active = currentActive;
+  }
+}
+
 /** A container item keeps its current contents and coins (`system.items`, `system.currency`). */
 export function keepPf1ContainerInventory(result, current) {
   if (current?.type !== CONTAINER_TYPE || result.type !== CONTAINER_TYPE) return;
