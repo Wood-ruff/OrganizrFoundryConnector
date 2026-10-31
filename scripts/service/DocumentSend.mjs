@@ -7,28 +7,32 @@ const SENDABLE_ITEM_TYPES = [
   "spell", "action", "feat",
   "weapon", "armor", "shield", "equipment", "consumable", "treasure", "backpack", "ammo", "book"
 ];
+const PF1_SYSTEM_ID = "pf1";
+const PF1_ONLY_ITEM_TYPES = ["loot", "container"];
 const COIN_CATEGORY = "coin";
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 
 /**
  * Whether "Send to Organizr" applies: world NPC/loot actors and physical, spell, action and feat items (not coins,
- * not the action companions an Organizr item brought along).
+ * not the action companions an Organizr item brought along); pf1 loot and container items only in a pf1 world.
  */
-export function isSendable(data, documentName) {
+export function isSendable(data, documentName, systemId = "") {
   if (!data || data.pack || companionFlag(data)) return false;
   if (documentName === "Actor") return SENDABLE_ACTOR_TYPES.includes(data.type);
   if (documentName !== "Item") return false;
-  if (!SENDABLE_ITEM_TYPES.includes(data.type)) return false;
+  if (!sendableItemTypes(systemId).includes(data.type)) return false;
   return !(data.type === "treasure" && data.system?.category === COIN_CATEGORY);
 }
 
 /**
- * The body of the document endpoint: the source data plus documentName, uuids and the known Organizr file. Without a
- * known file (a copy) the body drops the sheet flag, so the server does not take it for the original's file.
+ * The body of the document endpoint: the source data plus documentName, uuids, the known Organizr file and, when
+ * given, the totals the system derived. Without a known file (a copy) the body drops the sheet flag, so the server
+ * does not take it for the original's file.
  */
-export function sendBody(data, { documentName, uuid, itemUuids = new Map(), fileId = null }) {
+export function sendBody(data, { documentName, uuid, itemUuids = new Map(), fileId = null, derivedTotals = null }) {
   const body = { ...structuredClone(data), documentName, uuid };
   if (documentName === "Actor") body.items = (body.items ?? []).map((item) => withItemUuid(item, itemUuids));
+  if (derivedTotals) body.derivedTotals = structuredClone(derivedTotals);
   if (fileId !== null && fileId !== undefined) {
     body.organizr = { fileId: Number(fileId) };
   } else {
@@ -119,6 +123,11 @@ export function sendErrorKey(status) {
   if (status === 404) return "ORGANIZR.Send.Errors.ProjectNotFound";
   if (status === 400 || status === 422) return "ORGANIZR.Send.Errors.Refused";
   return "ORGANIZR.Send.Errors.ServerError";
+}
+
+function sendableItemTypes(systemId) {
+  if (systemId === PF1_SYSTEM_ID) return [...SENDABLE_ITEM_TYPES, ...PF1_ONLY_ITEM_TYPES];
+  return SENDABLE_ITEM_TYPES;
 }
 
 function isSameFile(copy, fileId) {

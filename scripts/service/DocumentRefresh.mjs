@@ -1,16 +1,23 @@
+import {
+  isPf1Data, keepPf1ContainerInventory, keepPf1ItemUses, keepPf1Resources, keepPf1SpellbookSlots
+} from "./Pf1PlayState.mjs";
+
 const DEFAULT_TOKEN_IMAGE = "icons/svg/mystery-man.svg";
-const PLAY_STATE_ITEM_TYPES = ["condition", "effect"];
+const PLAY_STATE_ITEM_TYPES = ["condition", "effect", "buff"];
 const SPELLCASTING_ENTRY = "spellcastingEntry";
 
 /**
  * The data that replaces a world document refreshed from Organizr: the incoming document with the current
- * token, HP, spent focus points and spell slots, conditions, effects and (for loot unless restoring) inventory kept.
- * Never mutates its inputs.
+ * token, HP, spent focus points, uses and spell slots, conditions, effects, buffs and (for loot actors and pf1
+ * containers unless restoring) inventory kept. Never mutates its inputs.
  */
 export function refreshedDocument(current, incoming, { restoreInventory = false, tokenFromIncoming = false, keepPlayState = true } = {}) {
   const result = structuredClone(incoming);
   result.flags = mergedFlags(current?.flags, incoming?.flags);
-  if (!isActorData(current)) return result;
+  if (!isActorData(current)) {
+    if (!restoreInventory && isPf1Data(current)) keepPf1ContainerInventory(result, current);
+    return result;
+  }
   result.prototypeToken = keptToken(current, incoming, tokenFromIncoming);
   if (keepPlayState) {
     keepCurrentHitPoints(result, current);
@@ -18,6 +25,7 @@ export function refreshedDocument(current, incoming, { restoreInventory = false,
   }
   result.items = keptItems(current, incoming, restoreInventory);
   if (keepPlayState) keepCurrentSlots(result.items, current.items);
+  if (keepPlayState && isPf1Data(current)) keepPf1PlayState(result, current);
   result.effects = structuredClone(current.effects ?? []);
   return result;
 }
@@ -36,6 +44,12 @@ export function createSeed(incoming) {
 export function importDataApplies(systemId, data) {
   if (systemId !== "pf2e") return true;
   return Boolean(data?.system?._migration);
+}
+
+function keepPf1PlayState(result, current) {
+  keepPf1Resources(result, current);
+  keepPf1SpellbookSlots(result, current);
+  keepPf1ItemUses(result.items, current.items);
 }
 
 function isActorData(data) {

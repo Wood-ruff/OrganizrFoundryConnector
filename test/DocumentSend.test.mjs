@@ -278,3 +278,39 @@ test("f4 the sent copy keeps its world place among the candidates", () => {
   assert.deepEqual(legacyFlagCandidates(second, [first, second]).map((entry) => entry.uuid), [ORIGINAL, DUPLICATE]);
   assert.deepEqual(legacyFlagCandidates(first, [first, second]).map((entry) => entry.uuid), [ORIGINAL, DUPLICATE]);
 });
+
+test("pf1 loot and container items are sendable only in a pf1 world", () => {
+  for (const type of ["loot", "container"]) {
+    assert.equal(isSendable({ type, system: {} }, "Item", "pf1"), true, type);
+    assert.equal(isSendable({ type, system: {} }, "Item", "pf2e"), false, type);
+    assert.equal(isSendable({ type, system: {} }, "Item", "dnd5e"), false, type);
+    assert.equal(isSendable({ type, system: {} }, "Item"), false, type);
+  }
+  assert.equal(isSendable({ type: "container", pack: "pf1.items" }, "Item", "pf1"), false);
+});
+
+test("pf1 attacks, buffs, classes and races stay unsendable; the shared kinds stay sendable in a pf1 world", () => {
+  for (const type of ["attack", "buff", "class", "race", "implant"]) {
+    assert.equal(isSendable({ type, system: {} }, "Item", "pf1"), false, type);
+  }
+  for (const type of ["spell", "feat", "weapon", "equipment", "consumable"]) {
+    assert.equal(isSendable({ type, system: {} }, "Item", "pf1"), true, type);
+  }
+  assert.equal(isSendable({ type: "npc" }, "Actor", "pf1"), true);
+  assert.equal(isSendable({ type: "character" }, "Actor", "pf1"), false);
+  assert.equal(isSendable({ type: "haunt" }, "Actor", "pf1"), false);
+});
+
+test("derivedTotals reach the body only when given, as a copy", () => {
+  const data = { _id: "npcActor00000001", name: "Fen Lurker", type: "npc", system: {}, items: [] };
+  const derivedTotals = { ac: 17, touchAc: 11, flatFootedAc: 16, hp: 22, bab: 3, cmb: 5, cmd: 16, init: 1, fort: 4, ref: 2, will: 1, skills: { per: 7 } };
+  const body = sendBody(data, { documentName: "Actor", uuid: "Actor.npcActor00000001", derivedTotals });
+  assert.deepEqual(body.derivedTotals, derivedTotals);
+  body.derivedTotals.skills.per = 0;
+  assert.equal(derivedTotals.skills.per, 7);
+
+  const without = sendBody(data, { documentName: "Actor", uuid: "Actor.npcActor00000001" });
+  assert.equal("derivedTotals" in without, false);
+  const withNull = sendBody(data, { documentName: "Actor", uuid: "Actor.npcActor00000001", derivedTotals: null });
+  assert.equal("derivedTotals" in withNull, false);
+});

@@ -2,24 +2,23 @@ import {
   fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlagAmong, recordedUuidOf, sendBody,
   sendErrorKey, sendOutcome, sentFlag
 } from "../service/DocumentSend.mjs";
+import { pf1DerivedTotals, sendsDerivedTotals } from "../service/Pf1Totals.mjs";
 import { sheetFlag } from "../service/SheetImport.mjs";
 import { linkedWorldDocuments } from "./SheetImport.mjs";
 import { isWorldLinked } from "../service/WorldLink.mjs";
 import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
+import { contextMenuEntry, directoryEntryId } from "../util/ContextMenuEntry.mjs";
 
 const SEND_ICON = "fa-solid fa-cloud-arrow-up";
-const CONTEXT_MENU_GENERATION = 14;
 
 const organizr = createOrganizrClient();
 const sending = new Set();
 
-/** Adds "Send to Organizr" to the Actors/Items directory context menus (V14) and to actor and item sheet headers. */
+/** Adds "Send to Organizr" to the Actors/Items directory context menus and to actor and item sheet headers. */
 export function registerSendControls() {
-  if (game.release.generation >= CONTEXT_MENU_GENERATION) {
-    Hooks.on("getActorContextOptions", (app, entries) => entries.push(contextEntry((li) => game.actors.get(li.dataset.entryId))));
-    Hooks.on("getItemContextOptions", (app, entries) => entries.push(contextEntry((li) => game.items.get(li.dataset.entryId))));
-  }
+  Hooks.on("getActorContextOptions", (app, entries) => entries.push(contextEntry((li) => game.actors.get(directoryEntryId(li)))));
+  Hooks.on("getItemContextOptions", (app, entries) => entries.push(contextEntry((li) => game.items.get(directoryEntryId(li)))));
   Hooks.on("getActorSheetHeaderButtons", addHeaderButton);
   Hooks.on("getItemSheetHeaderButtons", addHeaderButton);
 }
@@ -36,12 +35,12 @@ export async function sendToOrganizr(document) {
 }
 
 function contextEntry(documentOf) {
-  return {
+  return contextMenuEntry(game.release.generation, {
     label: "ORGANIZR.Send.Action",
     icon: SEND_ICON,
-    visible: (li) => canSend(documentOf(li)),
-    onClick: (event, li) => sendToOrganizr(documentOf(li))
-  };
+    isVisible: (li) => canSend(documentOf(li)),
+    run: (li) => sendToOrganizr(documentOf(li))
+  });
 }
 
 function addHeaderButton(sheet, buttons) {
@@ -52,7 +51,7 @@ function addHeaderButton(sheet, buttons) {
 
 function canSend(document) {
   if (!document || !game.user.isGM || !isWorldLinked(readWorldLink())) return false;
-  return isSendable(sendableView(document), document.documentName);
+  return isSendable(sendableView(document), document.documentName, game.system.id);
 }
 
 function sendableView(document) {
@@ -75,7 +74,8 @@ async function send(document, link) {
     documentName: document.documentName,
     uuid: document.uuid,
     itemUuids: itemUuidsOf(document),
-    fileId: previous?.fileId ?? null
+    fileId: previous?.fileId ?? null,
+    derivedTotals: derivedTotalsOf(document)
   });
   if (!fitsSendLimit(body)) {
     ui.notifications.error("ORGANIZR.Send.Errors.TooLarge", { localize: true, format: { name: document.name } });
@@ -91,6 +91,12 @@ async function send(document, link) {
   }
   await document.setFlag(MODULE_ID, "sheet", sentFlag(result, link, previous, document.uuid));
   notifySent(document.name, sendOutcome(result));
+}
+
+/** The totals pf1 derived for a prepared NPC, null for every other document. */
+function derivedTotalsOf(document) {
+  if (!sendsDerivedTotals(game.system.id, document.documentName, document.type)) return null;
+  return pf1DerivedTotals(document.system);
 }
 
 /** Whether the document's sheet flag is its own; asks Organizr for the recorded uuid only when legacy copies compete. */
