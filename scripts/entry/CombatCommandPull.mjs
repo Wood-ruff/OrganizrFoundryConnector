@@ -1,4 +1,6 @@
-import { ackBody, actorCommandState, commandOperation } from "../service/CombatCommands.mjs";
+import {
+  ackBody, actorCommandState, commandOperation, exhaustionLevelOf, exhaustionOperation, isDnd5eExhaustionCommand
+} from "../service/CombatCommands.mjs";
 import { combatErrorKey, combatantState } from "../service/CombatPayload.mjs";
 import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
@@ -44,8 +46,7 @@ async function handleCommands(commands) {
 async function applyCommand(command) {
   const combatant = game.combat?.combatants.get(command.combatantId) ?? null;
   if (!combatant?.actor) return { id: command.id, ok: false, error: "no combatant with that id" };
-  const state = actorCommandState(combatantState(combatant, { type: "command", direction: 0 }).actor);
-  const operation = commandOperation(command, state);
+  const operation = operationFor(command, combatant);
   try {
     await runOperation(combatant.actor, operation);
   } catch (error) {
@@ -55,11 +56,24 @@ async function applyCommand(command) {
   return { id: command.id, ok: true, error: operation.op === "skip" ? operation.reason : null };
 }
 
+function operationFor(command, combatant) {
+  if (isDnd5eExhaustionCommand(command, game.system.id)) {
+    return exhaustionOperation(command, exhaustionLevelOf(combatant.actor));
+  }
+  const state = actorCommandState(combatantState(combatant, { type: "command", direction: 0 }).actor);
+  return commandOperation(command, state);
+}
+
 async function runOperation(actor, operation) {
   if (operation.op === "setCondition") return setCondition(actor, operation);
   if (operation.op === "removeCondition") return removeCondition(actor, operation);
   if (operation.op === "removeEffect") return removeEffect(actor, operation);
   if (operation.op === "setStatus") return actor.toggleStatusEffect(operation.slug, { active: operation.active });
+  if (operation.op === "changeLevels") return changeLevels(actor, operation);
+}
+
+async function changeLevels(actor, { slug, steps }) {
+  for (const levels of steps) await actor.toggleStatusEffect(slug, { levels });
 }
 
 async function setCondition(actor, { slug, value }) {

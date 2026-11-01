@@ -239,3 +239,49 @@ test("the combat file id ignores a flag copied from another actor", () => {
   assert.equal(original.actor.organizrFileId, 31);
   assert.equal(duplicate.actor.organizrFileId, null);
 });
+
+function dnd5eActor(type, details, walk) {
+  return {
+    id: `D${type}`, uuid: `Actor.D${type}`, type, name: `Ashveil ${type}`, flags: {},
+    system: {
+      attributes: { hp: { value: 22, max: 40, temp: 3 }, ac: { value: 17 }, movement: { speeds: { walk, fly: 60 }, walk: walk + 5 } },
+      abilities: { con: { save: { value: 3 } }, dex: { save: { value: 0 } }, wis: { save: { value: -2 } } },
+      details
+    },
+    statuses: new Set(),
+    effects: { contents: [] }
+  };
+}
+
+test("a dnd5e npc has no level, its challenge rating and its derived walk speed", () => {
+  const [entry] = combatPayload(combatWith([dnd5eActor("npc", { level: 0, cr: 5 }, 30)]), world, { type: "start", direction: 1 }).combatants;
+  assert.equal(entry.actor.level, null);
+  assert.equal(entry.actor.cr, 5);
+  assert.equal(entry.actor.speed, 30);
+  assert.deepEqual(entry.actor.saves, { fortitude: 3, reflex: 0, will: -2 });
+});
+
+test("a dnd5e character has its total level, no challenge rating and its derived walk speed", () => {
+  const [entry] = combatPayload(combatWith([dnd5eActor("character", { level: 5 }, 25)]), world, { type: "start", direction: 1 }).combatants;
+  assert.equal(entry.actor.level, 5);
+  assert.equal(entry.actor.cr, null);
+  assert.equal(entry.actor.speed, 25);
+});
+
+test("a fractional challenge rating stays and a dnd5e actor without speeds falls back to the older walk", () => {
+  const actor = dnd5eActor("npc", { level: 0, cr: 0.25 }, 30);
+  actor.system.attributes.movement = { walk: 40 };
+  const [entry] = combatPayload(combatWith([actor]), world, { type: "start", direction: 1 }).combatants;
+  assert.equal(entry.actor.cr, 0.25);
+  assert.equal(entry.actor.speed, 40);
+});
+
+test("pf2e and pf1 actors keep their levels and carry no challenge rating", () => {
+  const pf1Npc = pf1Character();
+  pf1Npc.system.details.cr = { base: 3, total: 3 };
+  const [goblin, tamsin] = combatPayload(combatWith([pf2eActor(), pf1Npc]), world, { type: "start", direction: 1 }).combatants;
+  assert.equal(goblin.actor.level, 1);
+  assert.equal(goblin.actor.cr, null);
+  assert.equal(tamsin.actor.level, 4);
+  assert.equal(tamsin.actor.cr, null);
+});

@@ -156,7 +156,8 @@ function actorEntry(actor) {
     name: actor.name ?? null,
     isToken: Boolean(actor.isToken),
     organizrFileId: knownFileId(actor),
-    level: actor.level ?? system.details?.level?.value ?? null,
+    level: levelOf(actor, system),
+    cr: numberOrNull(system.details?.cr),
     alliance: actor.alliance ?? null,
     hp: hpOf(actor, system),
     ac: acOf(system),
@@ -167,6 +168,16 @@ function actorEntry(actor) {
     effects: effectsOf(actor),
     traits: listOf(actor.traits)
   };
+}
+
+/** Level: pf2e `actor.level`, pf1 `details.level.value`, dnd5e `details.level` (an NPC's 0 means it has none). */
+function levelOf(actor, system) {
+  return actor.level ?? system.details?.level?.value ?? positiveOrNull(system.details?.level);
+}
+
+function positiveOrNull(value) {
+  const number = numberOrNull(value);
+  return number !== null && number > 0 ? number : null;
 }
 
 /** Armor class: pf2e/dnd5e `attributes.ac.value`, pf1 `attributes.ac.normal.total`. */
@@ -182,12 +193,17 @@ function listOf(value) {
 
 /**
  * Land speed in feet: pf2e 8 `movement.speeds.land.value` (it deletes the older `attributes.speed`), dnd5e
- * `attributes.movement.walk`, pf1 `attributes.speed.land.total`.
+ * `attributes.movement.speeds.walk` (older `attributes.movement.walk`), pf1 `attributes.speed.land.total`.
  */
 function speedOf(system) {
   const pf2eLand = system.movement?.speeds?.land?.value;
   const speed = system.attributes?.speed ?? null;
-  return numberOrNull(pf2eLand ?? speed?.total ?? speed?.value ?? speed?.land?.total ?? system.attributes?.movement?.walk);
+  return numberOrNull(pf2eLand ?? speed?.total ?? speed?.value ?? speed?.land?.total ?? dnd5eWalkOf(system));
+}
+
+function dnd5eWalkOf(system) {
+  const movement = system.attributes?.movement ?? null;
+  return movement?.speeds?.walk ?? movement?.walk;
 }
 
 /** Fortitude/reflex/will: pf2e `actor.saves.<name>.mod`, pf1 `attributes.savingThrows.<fort|ref|will>.total`, dnd5e con/dex/wis saves. */
