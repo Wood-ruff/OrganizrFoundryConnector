@@ -114,6 +114,17 @@ test("loot2 batchPlan skips linked loot unless restoring", () => {
   assert.equal(restoring.refresh[1].uuid, "Actor.L1");
 });
 
+test("batchPlan refreshes linked loot in a dnd5e world (a container) and still skips it in pf1 and pf2e", () => {
+  const linked = new Map([["1", []], ["2", []]]);
+  const dnd5e = batchPlan(batch, linked, false, "dnd5e");
+  assert.deepEqual(dnd5e.refresh.map((sheet) => sheet.fileId), [1, 2]);
+  assert.deepEqual(dnd5e.skippedLoot, []);
+  assert.deepEqual(dnd5e.create.map((sheet) => sheet.fileId), [3, 4]);
+  for (const systemId of ["pf1", "pf2e"]) {
+    assert.deepEqual(batchPlan(batch, linked, false, systemId).skippedLoot.map((sheet) => sheet.fileId), [2]);
+  }
+});
+
 test("batchPlan creates everything when nothing is linked and accepts a Set of ids", () => {
   const plan = batchPlan(batch, new Set());
   assert.equal(plan.create.length, 4);

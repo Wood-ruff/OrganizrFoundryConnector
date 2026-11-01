@@ -76,6 +76,7 @@
       "Duplicates": "{name}: {count} more world copies carry the link to this sheet; only {uuid} was updated.",
       "CompanionsAdded": "{count} abilities added as action items in folder {folder}.",
       "CompanionsFailed": "{name}: {count} abilities could not be added as action items (see the console).",
+      "ContentsFailed": "{name}: some of the container's contents could not be added (see the console).",
       "Types": {
         "character": "Player characters",
         "npc": "NPCs",
@@ -109,7 +110,15 @@
       "BatchKeeps": "Refreshed actors keep their token, current HP (in pf1 the damage, nonlethal and temporary HP), spent focus points, spell slots, pf1 item uses and prepared casts, conditions, effects and buffs; refreshed items are replaced.",
       "BatchCharacters": "Refreshed characters take Organizr's items, currency and XP; send a character to Organizr first to keep changes made in Foundry.",
       "BatchSkipped": "{count} loot actors already in this world are skipped so taken items do not come back.",
-      "BatchConfirm": "Import"
+      "BatchConfirm": "Import",
+      "Dnd5e": {
+        "ActorBody": "Replaces stats, attacks, features and spells. Keeps the token (image, name, disposition), current HP (up to the new maximum), temporary HP, death saves, inspiration, spent hit dice, spent legendary actions and resistances, the lair state, resources, favorites, coins, spell slots, item uses, equipped, attuned and prepared states, consumable quantities, exhaustion and the other current effects.",
+        "CharacterBody": "Replaces the character's stats, classes, features, gear and spells. Keeps the token (image, name, disposition), current HP (up to the new maximum), temporary HP, death saves, inspiration, spent hit dice, resources, favorites, bastion, coins, spell slots, item uses, equipped, attuned and prepared states, consumable quantities, exhaustion and the other current effects. Items and XP are replaced with Organizr's; send the character to Organizr first to keep changes made in Foundry.",
+        "LootBody": "Replaces the container's name, image, settings and contents with the Organizr sheet's. Keeps the coins and the spent uses of contents that come back unless you tick the box below.",
+        "RestoreInventory": "Also restore the coins and the contents' uses",
+        "BatchKeeps": "Refreshed actors keep their token, current HP (up to the new maximum), temporary HP, death saves, inspiration, spent hit dice, spent legendary actions and resistances, the lair state, resources, favorites, coins, spell slots, item uses, equipped, attuned and prepared states, consumable quantities, exhaustion and the other current effects; refreshed containers get Organizr's contents and keep their coins and the spent uses of contents that come back; other refreshed items are replaced.",
+        "BatchCharacters": "Refreshed characters take Organizr's items and XP; send a character to Organizr first to keep changes made in Foundry."
+      }
     },
     "Send": {
       "Action": "Send to Organizr",

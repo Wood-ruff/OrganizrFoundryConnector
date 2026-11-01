@@ -2,6 +2,9 @@ import {
   isPf1Data, isReplacedPf1Buff, keepPf1BuffStates, keepPf1ContainerInventory, keepPf1ItemUses, keepPf1Resources,
   keepPf1SpellbookSlots
 } from "./Pf1PlayState.mjs";
+import {
+  applyDnd5eEffects, isDnd5eData, keepDnd5eActorState, keepDnd5eContainerCurrency
+} from "./Dnd5ePlayState.mjs";
 import { MODULE_ID } from "../config/ModuleId.mjs";
 
 const DEFAULT_TOKEN_IMAGE = "icons/svg/mystery-man.svg";
@@ -11,14 +14,15 @@ const SPELLCASTING_ENTRY = "spellcastingEntry";
 /**
  * The data that replaces a world document refreshed from Organizr: the incoming document with the current
  * token, HP, spent focus points, uses and spell slots, conditions, effects, buffs (a pf1 buff the export brings back
- * keeps its on/off state) and (for loot actors and pf1 containers unless restoring) inventory kept. Never mutates
- * its inputs.
+ * keeps its on/off state) and (for loot actors and pf1 containers unless restoring) inventory kept; dnd5e documents
+ * follow `Dnd5ePlayState` (a container's coins unless restoring, the export owns two effects). Never mutates its inputs.
  */
 export function refreshedDocument(current, incoming, { restoreInventory = false, tokenFromIncoming = false, keepPlayState = true } = {}) {
   const result = structuredClone(incoming);
   result.flags = mergedFlags(current?.flags, incoming?.flags);
   if (!isActorData(current)) {
     if (!restoreInventory && isPf1Data(current)) keepPf1ContainerInventory(result, current);
+    if (!restoreInventory && isDnd5eData(current)) keepDnd5eContainerCurrency(result, current);
     return result;
   }
   result.prototypeToken = keptToken(current, incoming, tokenFromIncoming);
@@ -29,7 +33,9 @@ export function refreshedDocument(current, incoming, { restoreInventory = false,
   result.items = keptItems(current, incoming, restoreInventory);
   if (keepPlayState) keepCurrentSlots(result.items, current.items);
   if (keepPlayState && isPf1Data(current)) keepPf1PlayState(result, current);
-  result.effects = structuredClone(current.effects ?? []);
+  if (keepPlayState && isDnd5eData(current)) keepDnd5eActorState(result, current);
+  if (isDnd5eData(current)) applyDnd5eEffects(result, current, incoming, keepPlayState);
+  else result.effects = structuredClone(current.effects ?? []);
   return result;
 }
 

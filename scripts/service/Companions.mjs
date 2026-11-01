@@ -1,12 +1,23 @@
 import { MODULE_ID } from "../config/ModuleId.mjs";
 
-/** `{document, companions}` from the sheet endpoint; an older server's bare document has no companions. */
+const CONTENT_ROLE = "content";
+
+/**
+ * `{document, companions}` from the sheet endpoint, the companions without a container's contents (role "content");
+ * an older server's bare document has no companions.
+ */
 export function splitPayload(payload) {
   if (isWrappedPayload(payload)) {
-    const companions = Array.isArray(payload.companions) ? payload.companions : [];
-    return { document: payload.document, companions: companions.filter(isUsableCompanion) };
+    const companions = usableCompanions(payload).filter((companion) => !isContent(companion));
+    return { document: payload.document, companions };
   }
   return { document: payload ?? {}, companions: [] };
+}
+
+/** The companions of the sheet endpoint that are a container's contents (role "content"), role kept. */
+export function contentCompanions(payload) {
+  if (!isWrappedPayload(payload)) return [];
+  return usableCompanions(payload).filter(isContent);
 }
 
 /** The world Item data of one companion: its document flagged with the owner sheet and label, the sheet flag removed. */
@@ -17,6 +28,13 @@ export function companionData(companion, ownerFileId) {
   delete scope.sheet;
   scope.companion = { fileId: Number(ownerFileId), label: companion.label };
   data.flags = { ...flags, [MODULE_ID]: scope };
+  return data;
+}
+
+/** The world Item data of one content companion, flagged like a companion and placed in the container with this id. */
+export function contentData(companion, ownerFileId, containerId) {
+  const data = companionData(companion, ownerFileId);
+  data.system = { ...(data.system ?? {}), container: containerId };
   return data;
 }
 
@@ -46,6 +64,15 @@ export function isCompanionFolderOf(folder, ownerFileId) {
 
 function isWrappedPayload(payload) {
   return Boolean(payload) && typeof payload.document === "object" && payload.document !== null && !("system" in payload);
+}
+
+function usableCompanions(payload) {
+  const companions = Array.isArray(payload.companions) ? payload.companions : [];
+  return companions.filter(isUsableCompanion);
+}
+
+function isContent(companion) {
+  return companion.role === CONTENT_ROLE;
 }
 
 function isUsableCompanion(companion) {

@@ -1,12 +1,15 @@
 import { MODULE_ID } from "../config/ModuleId.mjs";
-import { companionFlag } from "./Companions.mjs";
+import { companionFlag, contentData } from "./Companions.mjs";
+import { keepDnd5eContentUses } from "./Dnd5ePlayState.mjs";
 import { knownFileId } from "./CharacterSync.mjs";
 
 const IMPORTABLE_TYPES = ["npc", "item", "spell", "action", "loot"];
 const CHARACTER_TYPE = "character";
-const EXPORTED_CHARACTER_SYSTEM = "pf1e";
+const EXPORTED_CHARACTER_SYSTEMS = ["pf1e", "dnd5e"];
 const DEFAULT_TOKEN_IMAGE = "icons/svg/mystery-man.svg";
-const SYSTEM_DEFAULT_ICON = /^systems\/[^/]+\/icons\/default-icons\//;
+const SYSTEM_DEFAULT_ICONS = [/^systems\/[^/]+\/icons\/default-icons\//, /^systems\/dnd5e\/icons\/svg\/(actors|items)\//];
+const CONTENTS_SYSTEM_ID = "dnd5e";
+const CONTAINER_TYPE = "container";
 const IMAGE_EXTENSIONS = {
   "image/png": "png",
   "image/jpeg": "jpg",
@@ -16,9 +19,9 @@ const IMAGE_EXTENSIONS = {
   "image/svg+xml": "svg"
 };
 
-/** Whether Organizr can export this sheet kind as a Foundry document; characters only when their system is pf1e. */
+/** Whether Organizr can export this sheet kind as a Foundry document; characters only when their system is pf1e or dnd5e. */
 export function isImportable(type, system) {
-  if (type === CHARACTER_TYPE) return system === EXPORTED_CHARACTER_SYSTEM;
+  if (type === CHARACTER_TYPE) return EXPORTED_CHARACTER_SYSTEMS.includes(system);
   return IMPORTABLE_TYPES.includes(type);
 }
 
@@ -66,7 +69,23 @@ export function appliesPortrait(kind, data) {
   if (kind !== "Actor") return false;
   const image = data?.img;
   if (!image) return true;
-  return image === DEFAULT_TOKEN_IMAGE || SYSTEM_DEFAULT_ICON.test(image);
+  return image === DEFAULT_TOKEN_IMAGE || SYSTEM_DEFAULT_ICONS.some((pattern) => pattern.test(image));
+}
+
+/** Whether importing this document replaces a container's contents: a container Item in a dnd5e world. */
+export function holdsContents(kind, data, systemId) {
+  return kind === "Item" && data?.type === CONTAINER_TYPE && systemId === CONTENTS_SYSTEM_ID;
+}
+
+/**
+ * How a container's contents are replaced: `deleteIds` = everything it holds now (source data), `create` = the
+ * exported contents placed in the container with this id; unless restoring, contents that come back keep their
+ * spent uses.
+ */
+export function contentsReplacement(containerId, currentContents, contents, { ownerFileId, restoreInventory = false }) {
+  const create = contents.map((content) => contentData(content, ownerFileId, containerId));
+  if (!restoreInventory) keepDnd5eContentUses(create, currentContents);
+  return { deleteIds: currentContents.map((item) => item._id), create };
 }
 
 /** File name for a stored portrait, or null when the id is no plain number or the media type is no image we can place. */

@@ -439,10 +439,10 @@ test("a pf1 container refreshed with restoreInventory takes the exported content
   assert.deepEqual(result.system.currency, { pp: 1, gp: 40, sp: 5, cp: 0 });
 });
 
-test("container contents stay outside pf1 and for other pf1 item types", () => {
-  const dnd = pf1ContainerCurrent();
-  dnd._stats = { systemId: "dnd5e" };
-  assert.equal(refreshedDocument(dnd, pf1ContainerIncoming()).system.currency.gp, 40);
+test("container contents stay outside pf1 and dnd5e and for other pf1 item types", () => {
+  const pf2e = pf1ContainerCurrent();
+  pf2e._stats = { systemId: "pf2e" };
+  assert.equal(refreshedDocument(pf2e, pf1ContainerIncoming()).system.currency.gp, 40);
 
   const lootCurrentItem = { ...pf1ContainerCurrent(), type: "loot" };
   const lootIncomingItem = { ...pf1ContainerIncoming(), type: "loot" };
@@ -615,4 +615,93 @@ test("open2 a refresh keeps the module's sync flag next to the incoming sheet fl
     sync: { characterFileId: 31, documentUuid: "Actor.pcCurrent0000001" },
     sheet: { fileId: 31, type: "character" }
   });
+});
+
+const DND5E_STATS = { systemId: "dnd5e", systemVersion: "6.0.6" };
+const DND5E_EXHAUSTION = { _id: "dnd5eexhaustion0", name: "Exhaustion", type: "condition", statuses: ["exhaustion"], system: { type: "exhaustion", level: 2 } };
+
+function dnd5eNpcCurrent() {
+  return {
+    _id: "npcCurrent5e0001",
+    name: "Ashmaw Prowler",
+    type: "npc",
+    img: "systems/dnd5e/icons/svg/actors/npc.svg",
+    prototypeToken: { name: "Prowler", texture: { src: "systems/dnd5e/icons/svg/actors/npc.svg" } },
+    system: {
+      attributes: { hp: { value: 30, max: 60, temp: 4, tempmax: 0 }, hd: { spent: 1 }, exhaustion: 1 },
+      resources: { legact: { max: 3, spent: 2 }, legres: { max: 1, spent: 1 }, lair: { value: false, inside: false } }
+    },
+    items: [{ _id: "foundryBite00001", name: "Bite", type: "weapon", system: { uses: { spent: 1 }, equipped: true } }],
+    effects: [DND5E_EXHAUSTION, { _id: "foundryBless0001", name: "Bless", type: "base" }],
+    flags: { [MODULE]: { sheet: { fileId: 70 } } },
+    _stats: DND5E_STATS
+  };
+}
+
+function dnd5eNpcIncoming() {
+  return {
+    name: "Ashmaw Prowler",
+    type: "npc",
+    img: "systems/dnd5e/icons/svg/actors/npc.svg",
+    prototypeToken: { name: "Ashmaw Prowler", texture: { src: "systems/dnd5e/icons/svg/actors/npc.svg" } },
+    system: {
+      attributes: { hp: { value: 20, max: 20, temp: 0, tempmax: 0 }, hd: { spent: 0 }, exhaustion: 0 },
+      resources: { legact: { max: 3, spent: 0 }, legres: { max: 2, spent: 0 }, lair: { value: false, inside: false } }
+    },
+    items: [{ _id: "organizratk00001", name: "Bite", type: "weapon", system: { uses: { spent: 0 }, equipped: true } }],
+    effects: [],
+    flags: { [MODULE]: { sheet: { fileId: 70, type: "npc" } } }
+  };
+}
+
+test("a dnd5e NPC refresh keeps HP up to the new maximum, spent legendary actions and item uses", () => {
+  const result = refreshedDocument(dnd5eNpcCurrent(), dnd5eNpcIncoming());
+  assert.deepEqual(result.system.attributes.hp, { value: 20, max: 20, temp: 4, tempmax: 0 });
+  assert.equal(result.system.attributes.hd.spent, 1);
+  assert.deepEqual(result.system.resources.legact, { max: 3, spent: 2 });
+  assert.deepEqual(result.system.resources.legres, { max: 2, spent: 1 });
+  assert.equal(result.items[0].system.uses.spent, 1);
+  assert.equal(result.prototypeToken.name, "Prowler");
+});
+
+test("a dnd5e NPC refresh keeps its effects and exhaustion, with the stored level matching the effect", () => {
+  const result = refreshedDocument(dnd5eNpcCurrent(), dnd5eNpcIncoming());
+  assert.deepEqual(result.effects.map((effect) => effect._id), ["foundryBless0001", "dnd5eexhaustion0"]);
+  assert.equal(result.effects[1].system.level, 2);
+  assert.equal(result.system.attributes.exhaustion, 2);
+});
+
+test("a dnd5e document created a moment ago takes the export's effects, HP and stored exhaustion 0", () => {
+  const created = { _id: "npcNew000000001", name: "Ashmaw Prowler", type: "npc", prototypeToken: {}, system: {}, items: [], effects: [], _stats: DND5E_STATS };
+  const incoming = dnd5eNpcIncoming();
+  incoming.effects = [DND5E_EXHAUSTION, { _id: "organizradj00001", name: "Organizr adjustments", type: "base", changes: [] }];
+  const result = seededDocument(created, incoming);
+  assert.deepEqual(result.effects.map((effect) => effect._id), ["organizradj00001", "dnd5eexhaustion0"]);
+  assert.equal(result.system.attributes.exhaustion, 0);
+  assert.equal(result.system.attributes.hp.value, 20);
+  assert.equal(result.system.resources.legact.spent, 0);
+});
+
+function dnd5eContainerCurrent() {
+  return { _id: "satchelFoundry01", name: "Hollow Oak Satchel", type: "container", system: { currency: { gp: 1 }, capacity: { count: 4 } }, _stats: DND5E_STATS };
+}
+
+function dnd5eContainerIncoming() {
+  return { name: "Hollow Oak Satchel", type: "container", system: { currency: { gp: 12, ep: 3 }, capacity: { count: 10 } }, flags: {} };
+}
+
+test("a dnd5e container keeps its coins unless restoring; its settings come from the export", () => {
+  const kept = refreshedDocument(dnd5eContainerCurrent(), dnd5eContainerIncoming());
+  assert.deepEqual(kept.system, { currency: { gp: 1 }, capacity: { count: 10 } });
+  assert.equal("effects" in kept, false);
+
+  const restored = refreshedDocument(dnd5eContainerCurrent(), dnd5eContainerIncoming(), { restoreInventory: true });
+  assert.deepEqual(restored.system.currency, { gp: 12, ep: 3 });
+});
+
+test("pf2e actors still keep their current effects whole", () => {
+  const current = npcCurrent();
+  current.effects.push({ _id: "organizradj00001", name: "Organizr adjustments" });
+  const result = refreshedDocument(current, { ...npcIncoming(), effects: [{ _id: "incomingOnly0001" }] });
+  assert.deepEqual(result.effects, current.effects);
 });

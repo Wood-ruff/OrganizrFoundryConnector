@@ -1,10 +1,10 @@
 import {
-  appliesPortrait, documentKind, linkBody, linkedIndex, pickLinked, portraitFileName, sheetFlag, withDocumentUuid,
-  withPortrait, withRequestedFileId
+  appliesPortrait, contentsReplacement, documentKind, holdsContents, linkBody, linkedIndex, pickLinked, portraitFileName,
+  sheetFlag, withDocumentUuid, withPortrait, withRequestedFileId
 } from "../service/SheetImport.mjs";
 import { createSeed, importDataApplies, refreshedDocument, seededDocument } from "../service/DocumentRefresh.mjs";
 import {
-  companionData, companionFolderData, isCompanionFolderOf, isCompanionOf, splitPayload
+  companionData, companionFolderData, contentCompanions, isCompanionFolderOf, isCompanionOf, splitPayload
 } from "../service/Companions.mjs";
 import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
 import { worldInfo } from "../config/WorldInfo.mjs";
@@ -20,7 +20,8 @@ export function linkedWorldDocuments() {
 
 /**
  * Imports one Organizr sheet into this world: fetches its Foundry document and companions, stores an actor portrait,
- * creates the document or refreshes the linked copy (keeping its play state), then records the uuid in Organizr.
+ * creates the document or refreshes the linked copy (keeping its play state), replaces a dnd5e container's contents,
+ * then records the uuid in Organizr.
  * Returns { name, uuid, updated, warnings, duplicates, companions } where warnings are localization keys.
  */
 export async function importSheet(fileId, { recordedUuid = null, restoreInventory = false } = {}) {
@@ -38,6 +39,10 @@ export async function importSheet(fileId, { recordedUuid = null, restoreInventor
     ? await refreshDocument(target, document, restoreInventory)
     : await createDocument(kind, document, world.systemId);
   await stampDocumentUuid(result);
+  if (holdsContents(kind, data, world.systemId)) {
+    const contents = contentCompanions(payload);
+    await replaceContents(result, contents, { fileId, restoreInventory, systemId: world.systemId, warnings });
+  }
   const companionOutcome = await importCompanions(companions, fileId, result.name, world.systemId);
   await recordLink(link, fileId, result, world, warnings);
   return { name: result.name, uuid: result.uuid, updated: Boolean(target), warnings, duplicates, companions: companionOutcome };
@@ -90,6 +95,31 @@ async function createDocument(kind, document, systemId, placement = {}) {
     throw error;
   }
   return created;
+}
+
+/**
+ * Deletes everything the container holds now and creates the exported contents in it (in the container's folder);
+ * unless restoring, contents that come back keep their spent uses. A content that fails is a warning only.
+ */
+async function replaceContents(container, contents, { fileId, restoreInventory, systemId, warnings }) {
+  const currentContents = (await containedItems(container)).map((item) => item.toObject());
+  const plan = contentsReplacement(container.id, currentContents, contents, { ownerFileId: fileId, restoreInventory });
+  if (plan.deleteIds.length) await CONFIG.Item.documentClass.deleteDocuments(plan.deleteIds);
+  let failed = 0;
+  for (const data of plan.create) {
+    try {
+      await createDocument("Item", data, systemId, { folder: container.folder?.id ?? null });
+    } catch (error) {
+      console.warn(`Organizr connector: content "${data.name}" not imported`, error);
+      failed += 1;
+    }
+  }
+  if (failed > 0) warnings.push("ORGANIZR.Browser.ContentsFailed");
+}
+
+async function containedItems(container) {
+  const contained = await container.system?.allContainedItems;
+  return contained ? Array.from(contained.values()) : [];
 }
 
 async function importCompanions(companions, ownerFileId, ownerName, systemId) {

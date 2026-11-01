@@ -3,6 +3,7 @@ import { needsBatchConfirm } from "../service/RefreshPrompt.mjs";
 import { importErrorKey } from "../service/SheetImport.mjs";
 import { createImageCache } from "../service/ImageCache.mjs";
 import { readWorldLink } from "../config/ModuleSettings.mjs";
+import { worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { importSheet, linkedWorldDocuments } from "./SheetImport.mjs";
 import { confirmBatch, confirmRefresh } from "./RefreshConfirm.mjs";
@@ -246,7 +247,8 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     const entry = this.#entryOf(fileId);
     let restoreInventory = false;
     if (linkedWorldDocuments().has(fileId)) {
-      const answer = await this.#askFirst(() => confirmRefresh(entry?.name ?? `#${fileId}`, entry?.type));
+      const systemId = worldInfo().systemId;
+      const answer = await this.#askFirst(() => confirmRefresh(entry?.name ?? `#${fileId}`, entry?.type, systemId));
       if (!answer) return;
       restoreInventory = answer.restoreInventory;
     }
@@ -260,13 +262,14 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       .filter((sheet) => !this.#importing.has(String(sheet.fileId)));
     if (!sheets.length) return;
     const linked = linkedWorldDocuments();
-    let plan = batchPlan(sheets, linked, false);
+    const systemId = worldInfo().systemId;
+    let plan = batchPlan(sheets, linked, false, systemId);
     let restoreInventory = false;
     if (needsBatchConfirm(plan)) {
-      const answer = await this.#askFirst(() => confirmBatch(plan));
+      const answer = await this.#askFirst(() => confirmBatch(plan, systemId));
       if (!answer) return;
       restoreInventory = answer.restoreInventory && plan.skippedLoot.length > 0;
-      if (restoreInventory) plan = batchPlan(sheets, linked, true);
+      if (restoreInventory) plan = batchPlan(sheets, linked, true, systemId);
     }
     this.#importMany(plan, restoreInventory);
   }

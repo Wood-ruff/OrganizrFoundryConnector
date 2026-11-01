@@ -1,18 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  appliesPortrait, documentKind, importErrorKey, isImportable, linkBody, linkedIndex, pickLinked, portraitFileName,
-  sheetFlag, withDocumentUuid, withPortrait, withRequestedFileId
+  appliesPortrait, contentsReplacement, documentKind, holdsContents, importErrorKey, isImportable, linkBody, linkedIndex,
+  pickLinked, portraitFileName, sheetFlag, withDocumentUuid, withPortrait, withRequestedFileId
 } from "../scripts/service/SheetImport.mjs";
 
 const documentTypes = { Actor: ["character", "npc", "loot"], Item: ["weapon", "spell", "action"] };
 
-test("NPC, item, spell, action and loot sheets are importable in every system, characters only in pf1e", () => {
+test("NPC, item, spell, action and loot sheets are importable in every system, characters only in pf1e and dnd5e", () => {
   for (const type of ["npc", "item", "spell", "action", "loot"]) {
     assert.equal(isImportable(type), true);
     assert.equal(isImportable(type, "pf2e"), true);
   }
   assert.equal(isImportable("character", "pf1e"), true);
+  assert.equal(isImportable("character", "dnd5e"), true);
   assert.equal(isImportable("character", "pf2e"), false);
   assert.equal(isImportable("character", ""), false);
   assert.equal(isImportable("character"), false);
@@ -159,4 +160,64 @@ test("std8 a plain copy of an imported document still counts as a duplicate, a c
   const index = linkedIndex([importedCopy, pushedCopy]);
   assert.deepEqual([...index.keys()], ["10"]);
   assert.deepEqual(index.get("10"), [importedCopy]);
+});
+
+test("dnd5e actor and item icons count as default images, an own image does not", () => {
+  assert.equal(appliesPortrait("Actor", { type: "npc", img: "systems/dnd5e/icons/svg/actors/npc.svg" }), true);
+  assert.equal(appliesPortrait("Actor", { type: "character", img: "systems/dnd5e/icons/svg/actors/character.svg" }), true);
+  assert.equal(appliesPortrait("Actor", { type: "npc", img: "systems/dnd5e/icons/svg/items/feature.svg" }), true);
+  assert.equal(appliesPortrait("Actor", { type: "npc", img: "systems/dnd5e/icons/svg/damage/fire.svg" }), false);
+  assert.equal(appliesPortrait("Actor", { type: "npc", img: "systems/dnd5e/tokens/beast/Wolf.webp" }), false);
+  assert.equal(appliesPortrait("Actor", { type: "npc", img: "worlds/test-world/systems/dnd5e/icons/svg/actors/npc.svg" }), false);
+  assert.equal(appliesPortrait("Item", { type: "container", img: "systems/dnd5e/icons/svg/items/container.svg" }), false);
+});
+
+test("only a container Item in a dnd5e world has its contents replaced on import", () => {
+  assert.equal(holdsContents("Item", { type: "container" }, "dnd5e"), true);
+  assert.equal(holdsContents("Item", { type: "container" }, "pf1"), false);
+  assert.equal(holdsContents("Item", { type: "loot" }, "dnd5e"), false);
+  assert.equal(holdsContents("Actor", { type: "container" }, "dnd5e"), false);
+  assert.equal(holdsContents("Item", null, "dnd5e"), false);
+});
+
+function satchelContents() {
+  return [
+    {
+      label: "Item: Tallow Candle Bundle",
+      ownerName: "Hollow Oak Satchel",
+      role: "content",
+      document: { name: "Tallow Candle Bundle", type: "consumable", system: { quantity: 6, uses: { spent: 0 }, container: "organizrbox00001" } }
+    },
+    {
+      label: "Item: Cracked Sunstone",
+      ownerName: "Hollow Oak Satchel",
+      role: "content",
+      document: { name: "Cracked Sunstone", type: "loot", system: { quantity: 1, container: "organizrbox00001" }, flags: { core: { a: 1 } } }
+    }
+  ];
+}
+
+test("new contents are created in the container's order, pointing at its new id, flagged as its companions", () => {
+  const plan = contentsReplacement("newSatchel000001", [], satchelContents(), { ownerFileId: 77 });
+  assert.deepEqual(plan.deleteIds, []);
+  assert.deepEqual(plan.create.map((data) => data.name), ["Tallow Candle Bundle", "Cracked Sunstone"]);
+  assert.deepEqual(plan.create.map((data) => data.system.container), ["newSatchel000001", "newSatchel000001"]);
+  assert.deepEqual(plan.create[1].flags, { core: { a: 1 }, "organizr-foundry-connector": { companion: { fileId: 77, label: "Item: Cracked Sunstone" } } });
+});
+
+test("a refresh deletes every current content and creates the exported ones; spent uses come back by name", () => {
+  const current = [
+    { _id: "foundryCandle001", name: "Tallow Candle Bundle", type: "consumable", system: { quantity: 1, uses: { spent: 1 }, container: "satchelFoundry01" } },
+    { _id: "foundryRope00001", name: "Knotted Rope", type: "loot", system: { quantity: 1, container: "satchelFoundry01" } }
+  ];
+  const plan = contentsReplacement("satchelFoundry01", current, satchelContents(), { ownerFileId: 77 });
+  assert.deepEqual(plan.deleteIds, ["foundryCandle001", "foundryRope00001"]);
+  assert.equal(plan.create.length, 2);
+  assert.equal(plan.create[0].system.uses.spent, 1);
+  assert.equal(plan.create[0].system.quantity, 6);
+  assert.equal(plan.create[0].system.container, "satchelFoundry01");
+
+  const restored = contentsReplacement("satchelFoundry01", current, satchelContents(), { ownerFileId: 77, restoreInventory: true });
+  assert.equal(restored.create[0].system.uses.spent, 0);
+  assert.deepEqual(contentsReplacement("satchelFoundry01", current, [], { ownerFileId: 77 }).create, []);
 });

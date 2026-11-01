@@ -1,3 +1,5 @@
+import { currentItemMatcher } from "../util/ItemMatch.mjs";
+
 const PF1_SYSTEM_ID = "pf1";
 const KEPT_RESOURCE_KEYS = { hp: ["offset", "nonlethal", "temp"], wounds: ["offset"], vigor: ["offset", "temp"] };
 const CONTAINER_TYPE = "container";
@@ -48,11 +50,9 @@ export function keepPf1SpellbookSlots(result, current) {
  * position, a character made in Foundry has its own ids).
  */
 export function keepPf1ItemUses(items, currentItems) {
-  const currentById = new Map((currentItems ?? []).map((item) => [item._id, item]));
-  const currentByName = uniqueByTypeAndName(currentItems);
-  const incomingByName = uniqueByTypeAndName(items);
+  const currentItemOf = currentItemMatcher(items, currentItems);
   for (const item of items) {
-    const currentItem = matchingCurrentItem(item, currentById, currentByName, incomingByName);
+    const currentItem = currentItemOf(item);
     if (!currentItem) continue;
     keepUses(item.system?.uses, currentItem.system?.uses);
     keepPreparation(item.system?.preparation, currentItem.system?.preparation);
@@ -74,12 +74,10 @@ export function isReplacedPf1Buff(item, incomingItems) {
  * type and name, else a type and name unique on both sides; Foundry-only buffs are kept whole elsewhere.
  */
 export function keepPf1BuffStates(items, currentItems) {
-  const currentById = new Map((currentItems ?? []).map((item) => [item._id, item]));
-  const currentByName = uniqueByTypeAndName(currentItems);
-  const incomingByName = uniqueByTypeAndName(items);
+  const currentItemOf = currentItemMatcher(items, currentItems);
   for (const item of items) {
     if (item.type !== BUFF_TYPE) continue;
-    const currentItem = matchingCurrentItem(item, currentById, currentByName, incomingByName);
+    const currentItem = currentItemOf(item);
     const currentActive = currentItem?.system?.active;
     if (typeof currentActive !== "boolean") continue;
     item.system = item.system ?? {};
@@ -109,33 +107,6 @@ function attributesOf(result) {
   result.system = result.system ?? {};
   result.system.attributes = result.system.attributes ?? {};
   return result.system.attributes;
-}
-
-function matchingCurrentItem(item, currentById, currentByName, incomingByName) {
-  const sameId = currentById.get(item._id);
-  if (isSameItem(sameId, item)) return sameId;
-  const key = typeAndName(item);
-  if (incomingByName.get(key) !== item) return null;
-  return currentByName.get(key) ?? null;
-}
-
-/** Items by type and name; a type and name shared by two items maps to null. */
-function uniqueByTypeAndName(items) {
-  const byKey = new Map();
-  for (const item of items ?? []) {
-    const key = typeAndName(item);
-    byKey.set(key, byKey.has(key) ? null : item);
-  }
-  return byKey;
-}
-
-function typeAndName(item) {
-  return JSON.stringify([item?.type, item?.name]);
-}
-
-function isSameItem(currentItem, item) {
-  if (!currentItem) return false;
-  return currentItem.type === item.type && currentItem.name === item.name;
 }
 
 function keepUses(uses, currentUses) {

@@ -1,5 +1,6 @@
 import { isImportable } from "./SheetImport.mjs";
 
+const DND5E_SYSTEM_ID = "dnd5e";
 const KNOWN_TYPES = ["character", "npc", "item", "spell", "action", "loot", "status"];
 
 /**
@@ -108,14 +109,20 @@ export function importableFileIds(projects, projectId, type) {
 
 /**
  * Splits a batch into sheets to create (not in this world), to refresh (linked) and linked loot that is skipped
- * so a looted chest is not restocked; restoring the inventory moves that loot into `refresh`.
+ * so a looted chest is not restocked; restoring the inventory moves that loot into `refresh`. In a dnd5e world
+ * linked loot (a container) is refreshed like a single import, which replaces its contents anyway.
  */
-export function batchPlan(sheets, linkedFileIds, restoreInventory = false) {
+export function batchPlan(sheets, linkedFileIds, restoreInventory = false, systemId = "") {
   const plan = { create: [], refresh: [], skippedLoot: [] };
+  const skipsLoot = skipsLinkedLoot(restoreInventory, systemId);
   for (const sheet of sheets ?? []) {
     if (!linkedFileIds.has(String(sheet.fileId))) plan.create.push(sheet);
-    else if (sheet.type === "loot" && !restoreInventory) plan.skippedLoot.push(sheet);
+    else if (sheet.type === "loot" && skipsLoot) plan.skippedLoot.push(sheet);
     else plan.refresh.push(sheet);
   }
   return plan;
+}
+
+function skipsLinkedLoot(restoreInventory, systemId) {
+  return !restoreInventory && systemId !== DND5E_SYSTEM_ID;
 }

@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  companionData, companionFlag, companionFolderData, isCompanionFolderOf, isCompanionOf, splitPayload
+  companionData, companionFlag, companionFolderData, contentCompanions, contentData, isCompanionFolderOf, isCompanionOf,
+  splitPayload
 } from "../scripts/service/Companions.mjs";
 
 const MODULE = "organizr-foundry-connector";
@@ -77,4 +78,38 @@ test("the companion folder is an Item folder flagged with the owner sheet", () =
   assert.equal(isCompanionFolderOf({ ...folder, type: "Actor" }, 30), false);
   assert.equal(isCompanionFolderOf({ type: "Item", flags: {} }, 30), false);
   assert.equal(isCompanionFolderOf(null, 30), false);
+});
+
+function candleContent() {
+  return {
+    label: "Item: Tallow Candle Bundle",
+    ownerName: "Hollow Oak Satchel",
+    role: "content",
+    document: { name: "Tallow Candle Bundle", type: "consumable", system: { quantity: 6, container: "organizrbox00001" } }
+  };
+}
+
+test("container contents are split off the companions with their role kept", () => {
+  const payload = { document: { name: "Hollow Oak Satchel", type: "container", system: {} }, companions: [sparkCompanion(), candleContent(), { role: "content" }] };
+  assert.deepEqual(splitPayload(payload).companions, [sparkCompanion()]);
+  const contents = contentCompanions(payload);
+  assert.equal(contents.length, 1);
+  assert.equal(contents[0].role, "content");
+  assert.equal(contents[0].label, "Item: Tallow Candle Bundle");
+});
+
+test("a bare document or a payload without companions has no contents", () => {
+  assert.deepEqual(contentCompanions({ name: "Hollow Oak Satchel", type: "container", system: {} }), []);
+  assert.deepEqual(contentCompanions({ document: { name: "X" } }), []);
+  assert.deepEqual(contentCompanions(null), []);
+});
+
+test("content data points at the new container and carries the companion flag", () => {
+  const companion = candleContent();
+  const data = contentData(companion, "77", "newSatchelId0001");
+  assert.equal(data.system.container, "newSatchelId0001");
+  assert.equal(data.system.quantity, 6);
+  assert.deepEqual(data.flags[MODULE], { companion: { fileId: 77, label: "Item: Tallow Candle Bundle" } });
+  assert.equal(companion.document.system.container, "organizrbox00001");
+  assert.equal(contentData({ label: "Item: Bare", document: { name: "Bare", type: "loot" } }, 77, "c1").system.container, "c1");
 });
