@@ -1,0 +1,136 @@
+{
+  "rules": "modern",
+  "ac": 15,
+  "hp": 110,
+  "prof": 3,
+  "init": 3,
+  "speed": 30,
+  "cr": 5,
+  "exhaustion": 0,
+  "abilities": {
+    "str": {
+      "score": 19,
+      "mod": 4,
+      "save": 4
+    },
+    "dex": {
+      "score": 13,
+      "mod": 1,
+      "save": 1
+    },
+    "con": {
+      "score": 17,
+      "mod": 3,
+      "save": 6
+    },
+    "int": {
+      "score": 11,
+      "mod": 0,
+      "save": 0
+    },
+    "wis": {
+      "score": 15,
+      "mod": 2,
+      "save": 5
+    },
+    "cha": {
+      "score": 16,
+      "mod": 3,
+      "save": 3
+    }
+  },
+  "skills": {
+    "acr": {
+      "total": 1,
+      "passive": 11
+    },
+    "ani": {
+      "total": 2,
+      "passive": 12
+    },
+    "arc": {
+      "total": 0,
+      "passive": 10
+    },
+    "ath": {
+      "total": 7,
+      "passive": 17
+    },
+    "dec": {
+      "total": 3,
+      "passive": 13
+    },
+    "his": {
+      "total": 0,
+      "passive": 10
+    },
+    "ins": {
+      "total": 2,
+      "passive": 12
+    },
+    "itm": {
+      "total": 3,
+      "passive": 13
+    },
+    "inv": {
+      "total": 0,
+      "passive": 10
+    },
+    "med": {
+      "total": 2,
+      "passive": 12
+    },
+    "nat": {
+      "total": 0,
+      "passive": 10
+    },
+    "prc": {
+      "total": 5,
+      "passive": 15
+    },
+    "prf": {
+      "total": 3,
+      "passive": 13
+    },
+    "per": {
+      "total": 3,
+      "passive": 13
+    },
+    "rel": {
+      "total": 0,
+      "passive": 10
+    },
+    "slt": {
+      "total": 1,
+      "passive": 11
+    },
+    "ste": {
+      "total": 7,
+      "passive": 17
+    },
+    "sur": {
+      "total": 2,
+      "passive": 12
+    }
+  },
+  "tools": {},
+  "spell": {
+    "ability": "cha",
+    "dc": 14,
+    "attack": 6,
+    "level": 5
+  },
+  "slots": {
+    "spell1": 4,
+    "spell2": 3,
+    "spell3": 2,
+    "spell4": 0,
+    "spell5": 0,
+    "spell6": 0,
+    "spell7": 0,
+    "spell8": 0,
+    "spell9": 0,
+    "pact": 0,
+    "pactLevel": 0
+  }
+}

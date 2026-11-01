@@ -2,15 +2,15 @@ import { characterExport } from "./CharacterExport.mjs";
 import { withLocalizedResistanceLabels } from "./RuleLabels.mjs";
 import { MODULE_ID } from "../config/ModuleId.mjs";
 import { ownsSheetFlag } from "./DocumentSend.mjs";
-import { derivedTotalsFor } from "./Pf1Totals.mjs";
+import { derivedTotalsFor } from "./DerivedTotals.mjs";
 
 /**
  * The request body for the Organizr character endpoint: the export plus the Foundry uuids and,
- * when the actor is already known to Organizr, the file it belongs to; a pf1 character also carries the totals pf1
- * prepared (`derivedTotals`). With a localizer, custom resistance labels that are pf2e lang keys are sent as their
- * localized text.
+ * when the actor is already known to Organizr, the file it belongs to; a pf1 or dnd5e character also carries the totals
+ * its system prepared (`derivedTotals`, dnd5e under the given rules version). With a localizer, custom resistance
+ * labels that are pf2e lang keys are sent as their localized text.
  */
-export function syncBody(actor, world, localize = null) {
+export function syncBody(actor, world, localize = null, rulesVersion = "") {
   const exported = characterExport(actor, world);
   const data = localize ? withLocalizedResistanceLabels(exported, localize) : exported;
   const itemUuids = itemUuidsOf(actor);
@@ -18,7 +18,7 @@ export function syncBody(actor, world, localize = null) {
   data.items = (data.items ?? []).map((item, index) => withUuid(item, itemUuids, index));
   const fileId = knownFileId(actor);
   if (fileId !== null) data.organizr = { fileId };
-  const derivedTotals = derivedTotalsFor(world.systemId, actor);
+  const derivedTotals = derivedTotalsFor(world.systemId, actor, rulesVersion);
   if (derivedTotals) data.derivedTotals = derivedTotals;
   return data;
 }

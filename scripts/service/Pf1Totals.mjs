@@ -1,19 +1,8 @@
-const PF1_SYSTEM_ID = "pf1";
+import { addWholeNumber, isFiniteNumber, wholeNumbers } from "../util/WholeNumbers.mjs";
+
 const SAVES = ["fort", "ref", "will"];
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
 const SPELL_LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-const TOTALS_ACTOR_TYPES = ["npc", "character"];
-
-/** Whether a send carries the prepared pf1 totals: NPC and character actors in a pf1 world. */
-export function sendsDerivedTotals(systemId, documentName, type) {
-  return systemId === PF1_SYSTEM_ID && documentName === "Actor" && TOTALS_ACTOR_TYPES.includes(type);
-}
-
-/** The prepared totals a send of this document carries in this world's system, or null when it carries none. */
-export function derivedTotalsFor(systemId, document) {
-  if (!sendsDerivedTotals(systemId, document?.documentName, document?.type)) return null;
-  return pf1DerivedTotals(document.system);
-}
 
 /**
  * The totals pf1 derived for a prepared actor (`actor.system`, NPC or character): AC, touch and flat-footed AC, max
@@ -45,16 +34,6 @@ function combatTotals(attributes) {
   };
   for (const save of SAVES) totals[save] = attributes.savingThrows?.[save]?.total;
   return totals;
-}
-
-function wholeNumbers(values) {
-  const whole = {};
-  for (const [key, value] of Object.entries(values)) whole[key] = Math.floor(value);
-  return whole;
-}
-
-function addWholeNumber(target, key, value) {
-  if (isFiniteNumber(value)) target[key] = Math.floor(value);
 }
 
 /** Skill modifiers by pf1 id, custom skills by their key, sub-skills as `<id>.<tag>` right after their parent. */
@@ -105,8 +84,4 @@ function slotMaxima(spells) {
   const slots = {};
   for (const level of SPELL_LEVELS) addWholeNumber(slots, String(level), spells?.[`spell${level}`]?.max);
   return slots;
-}
-
-function isFiniteNumber(value) {
-  return typeof value === "number" && Number.isFinite(value);
 }

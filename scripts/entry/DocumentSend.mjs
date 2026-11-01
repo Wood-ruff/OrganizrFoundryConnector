@@ -1,12 +1,13 @@
 import {
-  fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlagAmong, recordedUuidOf, sendBody,
-  sendErrorKey, sendOutcome, sentFlag
+  containedItemsData, fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlagAmong,
+  recordedUuidOf, sendBody, sendErrorKey, sendOutcome, sendsContents, sentFlag
 } from "../service/DocumentSend.mjs";
-import { derivedTotalsFor } from "../service/Pf1Totals.mjs";
+import { derivedTotalsFor } from "../service/DerivedTotals.mjs";
 import { sheetFlag } from "../service/SheetImport.mjs";
 import { linkedWorldDocuments } from "./SheetImport.mjs";
 import { isWorldLinked } from "../service/WorldLink.mjs";
 import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
+import { dnd5eRulesVersion } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { contextMenuEntry, directoryEntryId, isWorldDirectory } from "../util/ContextMenuEntry.mjs";
 
@@ -80,7 +81,8 @@ async function send(document, link) {
     uuid: document.uuid,
     itemUuids: itemUuidsOf(document),
     fileId: previous?.fileId ?? null,
-    derivedTotals: derivedTotalsFor(game.system.id, document)
+    derivedTotals: derivedTotalsFor(game.system.id, document, dnd5eRulesVersion()),
+    contents: await contentsOf(document)
   });
   if (!fitsSendLimit(body)) {
     ui.notifications.error("ORGANIZR.Send.Errors.TooLarge", { localize: true, format: { name: document.name } });
@@ -132,6 +134,11 @@ async function recordedUuidFor(link, fileId) {
     console.warn("Organizr connector: sheet list not read, the oldest copy owns the sheet flag", error);
     return null;
   }
+}
+
+async function contentsOf(document) {
+  if (!sendsContents(game.system.id, document.documentName, document.type)) return null;
+  return containedItemsData(document.system);
 }
 
 function itemUuidsOf(document) {

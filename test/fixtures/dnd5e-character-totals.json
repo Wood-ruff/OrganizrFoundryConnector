@@ -1,0 +1,137 @@
+{
+  "rules": "modern",
+  "ac": 17,
+  "hp": 40,
+  "prof": 3,
+  "init": 0,
+  "speed": 25,
+  "level": 5,
+  "exhaustion": 1,
+  "abilities": {
+    "str": {
+      "score": 15,
+      "mod": 2,
+      "save": 3
+    },
+    "dex": {
+      "score": 14,
+      "mod": 2,
+      "save": 0
+    },
+    "con": {
+      "score": 14,
+      "mod": 2,
+      "save": 3
+    },
+    "int": {
+      "score": 16,
+      "mod": 3,
+      "save": 1
+    },
+    "wis": {
+      "score": 10,
+      "mod": 0,
+      "save": -2
+    },
+    "cha": {
+      "score": 8,
+      "mod": -1,
+      "save": -3
+    }
+  },
+  "skills": {
+    "acr": {
+      "total": 0,
+      "passive": 10
+    },
+    "ani": {
+      "total": -2,
+      "passive": 8
+    },
+    "arc": {
+      "total": 7,
+      "passive": 17
+    },
+    "ath": {
+      "total": 3,
+      "passive": 13
+    },
+    "dec": {
+      "total": -3,
+      "passive": 7
+    },
+    "his": {
+      "total": 4,
+      "passive": 14
+    },
+    "ins": {
+      "total": -2,
+      "passive": 8
+    },
+    "itm": {
+      "total": -3,
+      "passive": 7
+    },
+    "inv": {
+      "total": 4,
+      "passive": 14
+    },
+    "med": {
+      "total": -2,
+      "passive": 8
+    },
+    "nat": {
+      "total": 1,
+      "passive": 11
+    },
+    "prc": {
+      "total": 1,
+      "passive": 11
+    },
+    "prf": {
+      "total": -3,
+      "passive": 7
+    },
+    "per": {
+      "total": -3,
+      "passive": 7
+    },
+    "rel": {
+      "total": 1,
+      "passive": 11
+    },
+    "slt": {
+      "total": 0,
+      "passive": 10
+    },
+    "ste": {
+      "total": 0,
+      "passive": 10
+    },
+    "sur": {
+      "total": -2,
+      "passive": 8
+    }
+  },
+  "tools": {
+    "cartographer": 4
+  },
+  "spell": {
+    "ability": "int",
+    "dc": 14,
+    "attack": 4
+  },
+  "slots": {
+    "spell1": 3,
+    "spell2": 0,
+    "spell3": 0,
+    "spell4": 0,
+    "spell5": 0,
+    "spell6": 0,
+    "spell7": 0,
+    "spell8": 0,
+    "spell9": 0,
+    "pact": 0,
+    "pactLevel": 0
+  }
+}

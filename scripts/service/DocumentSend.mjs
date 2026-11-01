@@ -8,13 +8,19 @@ const SENDABLE_ITEM_TYPES = [
   "weapon", "armor", "shield", "equipment", "consumable", "treasure", "backpack", "ammo", "book"
 ];
 const PF1_SYSTEM_ID = "pf1";
-const PF1_ONLY_ITEM_TYPES = ["loot", "container"];
+const DND5E_SYSTEM_ID = "dnd5e";
+const SYSTEM_ITEM_TYPES = {
+  [PF1_SYSTEM_ID]: ["loot", "container"],
+  [DND5E_SYSTEM_ID]: ["tool", "loot", "container"]
+};
+const CONTAINER_TYPE = "container";
 const COIN_CATEGORY = "coin";
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 
 /**
  * Whether "Send to Organizr" applies: world NPC/loot actors and physical, spell, action and feat items (not coins,
- * not the action companions an Organizr item brought along); pf1 loot and container items only in a pf1 world.
+ * not the action companions an Organizr item brought along); loot and container items only in a pf1 or dnd5e world,
+ * tool items only in a dnd5e world.
  */
 export function isSendable(data, documentName, systemId = "") {
   if (!data || data.pack || companionFlag(data)) return false;
@@ -26,19 +32,36 @@ export function isSendable(data, documentName, systemId = "") {
 
 /**
  * The body of the document endpoint: the source data plus documentName, uuids, the known Organizr file and, when
- * given, the totals the system derived. Without a known file (a copy) the body drops the sheet flag, so the server
- * does not take it for the original's file.
+ * given, the totals the system derived and a container's contained items. Without a known file (a copy) the body
+ * drops the sheet flag, so the server does not take it for the original's file.
  */
-export function sendBody(data, { documentName, uuid, itemUuids = new Map(), fileId = null, derivedTotals = null }) {
+export function sendBody(data, options) {
+  const { documentName, uuid, itemUuids = new Map(), fileId = null, derivedTotals = null, contents = null } = options;
   const body = { ...structuredClone(data), documentName, uuid };
   if (documentName === "Actor") body.items = (body.items ?? []).map((item) => withItemUuid(item, itemUuids));
   if (derivedTotals) body.derivedTotals = structuredClone(derivedTotals);
+  if (Array.isArray(contents)) body.contents = structuredClone(contents);
   if (fileId !== null && fileId !== undefined) {
     body.organizr = { fileId: Number(fileId) };
   } else {
     dropSheetFlag(body);
   }
   return body;
+}
+
+/** Whether a send of this document carries the items it contains: dnd5e container items. */
+export function sendsContents(systemId, documentName, type) {
+  return systemId === DND5E_SYSTEM_ID && documentName === "Item" && type === CONTAINER_TYPE;
+}
+
+/**
+ * The source data of every item a dnd5e container holds, nested containers' items included, flat; each keeps its
+ * `system.container`. The system answers with a promise for a compendium container.
+ */
+export async function containedItemsData(containerSystem) {
+  const contained = await containerSystem?.allContainedItems;
+  if (!contained) return [];
+  return Array.from(contained.values(), (item) => item.toObject());
 }
 
 /** Whether the body stays within the server's 5 MB limit. */
@@ -126,8 +149,8 @@ export function sendErrorKey(status) {
 }
 
 function sendableItemTypes(systemId) {
-  if (systemId === PF1_SYSTEM_ID) return [...SENDABLE_ITEM_TYPES, ...PF1_ONLY_ITEM_TYPES];
-  return SENDABLE_ITEM_TYPES;
+  const systemTypes = Object.hasOwn(SYSTEM_ITEM_TYPES, systemId) ? SYSTEM_ITEM_TYPES[systemId] : [];
+  return [...SENDABLE_ITEM_TYPES, ...systemTypes];
 }
 
 function isSameFile(copy, fileId) {

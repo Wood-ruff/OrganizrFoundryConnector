@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlag, ownsSheetFlagAmong, recordedUuidOf,
-  sendBody, sendErrorKey, sendOutcome, sentFlag
+  containedItemsData, fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlag,
+  ownsSheetFlagAmong, recordedUuidOf, sendBody, sendErrorKey, sendOutcome, sendsContents, sentFlag
 } from "../scripts/service/DocumentSend.mjs";
 
 const MODULE = "organizr-foundry-connector";
@@ -279,14 +279,87 @@ test("f4 the sent copy keeps its world place among the candidates", () => {
   assert.deepEqual(legacyFlagCandidates(first, [first, second]).map((entry) => entry.uuid), [ORIGINAL, DUPLICATE]);
 });
 
-test("pf1 loot and container items are sendable only in a pf1 world", () => {
+test("loot and container items are sendable only in a pf1 or dnd5e world", () => {
   for (const type of ["loot", "container"]) {
     assert.equal(isSendable({ type, system: {} }, "Item", "pf1"), true, type);
+    assert.equal(isSendable({ type, system: {} }, "Item", "dnd5e"), true, type);
     assert.equal(isSendable({ type, system: {} }, "Item", "pf2e"), false, type);
-    assert.equal(isSendable({ type, system: {} }, "Item", "dnd5e"), false, type);
     assert.equal(isSendable({ type, system: {} }, "Item"), false, type);
   }
   assert.equal(isSendable({ type: "container", pack: "pf1.items" }, "Item", "pf1"), false);
+  assert.equal(isSendable({ type: "container", pack: "world.gear" }, "Item", "dnd5e"), false);
+});
+
+test("dnd5e tool items are sendable only in a dnd5e world", () => {
+  assert.equal(isSendable({ type: "tool", system: {} }, "Item", "dnd5e"), true);
+  assert.equal(isSendable({ type: "tool", system: {} }, "Item", "pf1"), false);
+  assert.equal(isSendable({ type: "tool", system: {} }, "Item", "pf2e"), false);
+  assert.equal(isSendable({ type: "tool", system: {} }, "Item"), false);
+  assert.equal(isSendable({ type: "tool", system: {} }, "Item", "constructor"), false);
+});
+
+test("dnd5e classes, subclasses, species and backgrounds stay unsendable; the shared kinds stay sendable", () => {
+  for (const type of ["class", "subclass", "race", "background", "facility"]) {
+    assert.equal(isSendable({ type, system: {} }, "Item", "dnd5e"), false, type);
+  }
+  for (const type of ["spell", "feat", "weapon", "equipment", "consumable"]) {
+    assert.equal(isSendable({ type, system: {} }, "Item", "dnd5e"), true, type);
+  }
+  assert.equal(isSendable({ type: "npc" }, "Actor", "dnd5e"), true);
+  assert.equal(isSendable({ type: "character" }, "Actor", "dnd5e"), false);
+  assert.equal(isSendable({ type: "vehicle" }, "Actor", "dnd5e"), false);
+});
+
+test("only a dnd5e container item sends its contents", () => {
+  assert.equal(sendsContents("dnd5e", "Item", "container"), true);
+  assert.equal(sendsContents("pf1", "Item", "container"), false);
+  assert.equal(sendsContents("dnd5e", "Item", "loot"), false);
+  assert.equal(sendsContents("dnd5e", "Actor", "container"), false);
+});
+
+function heldItem(id, name) {
+  return { toObject: () => ({ _id: id, name, type: "loot", system: { container: "satchel000000001", quantity: 2 } }) };
+}
+
+function satchelContents() {
+  return new Map([
+    ["candles000000001", heldItem("candles000000001", "Tallow Candles")],
+    ["pouch00000000001", heldItem("pouch00000000001", "Inner Pouch")]
+  ]);
+}
+
+test("the contained items' source data comes flat, each keeping its container", async () => {
+  const data = await containedItemsData({ allContainedItems: satchelContents() });
+  assert.deepEqual(data.map((item) => item.name), ["Tallow Candles", "Inner Pouch"]);
+  assert.equal(data.every((item) => item.system.container === "satchel000000001"), true);
+});
+
+test("a compendium container's contents arrive as a promise and are awaited", async () => {
+  const data = await containedItemsData({ allContainedItems: Promise.resolve(satchelContents()) });
+  assert.equal(data.length, 2);
+  assert.equal(data[0]._id, "candles000000001");
+});
+
+test("a container without contents gives an empty list", async () => {
+  assert.deepEqual(await containedItemsData({ allContainedItems: new Map() }), []);
+  assert.deepEqual(await containedItemsData({}), []);
+  assert.deepEqual(await containedItemsData(undefined), []);
+});
+
+test("a container body carries its contents top-level, as a copy", () => {
+  const data = { _id: "satchel000000001", name: "Oak Satchel", type: "container", system: { capacity: {} } };
+  const contents = [{ _id: "candles000000001", name: "Tallow Candles", system: { container: "satchel000000001" } }];
+  const body = sendBody(data, { documentName: "Item", uuid: "Item.satchel000000001", contents });
+  assert.deepEqual(body.contents, contents);
+  body.contents[0].name = "Changed";
+  assert.equal(contents[0].name, "Tallow Candles");
+
+  const without = sendBody(data, { documentName: "Item", uuid: "Item.satchel000000001" });
+  assert.equal("contents" in without, false);
+  const withNull = sendBody(data, { documentName: "Item", uuid: "Item.satchel000000001", contents: null });
+  assert.equal("contents" in withNull, false);
+  const empty = sendBody(data, { documentName: "Item", uuid: "Item.satchel000000001", contents: [] });
+  assert.deepEqual(empty.contents, []);
 });
 
 test("pf1 attacks, buffs, classes and races stay unsendable; the shared kinds stay sendable in a pf1 world", () => {

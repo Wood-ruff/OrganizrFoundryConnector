@@ -161,6 +161,28 @@ test("a pf2e character and a pf1 character without numeric totals push without d
   assert.equal("derivedTotals" in syncBody(actor([], []), world), false);
 });
 
+const dnd5eWorld = { id: "w2", coreVersion: "14.369", systemId: "dnd5e", systemVersion: "6.0.6" };
+
+function dnd5eCharacter() {
+  const system = JSON.parse(readFileSync(new URL("fixtures/dnd5e-character-system.json", import.meta.url), "utf8"));
+  return { ...actor([], []), type: "character", system };
+}
+
+test("a dnd5e character's push body carries the totals dnd5e prepared under the given rules version", () => {
+  const totals = JSON.parse(readFileSync(new URL("fixtures/dnd5e-character-totals.json", import.meta.url), "utf8"));
+
+  const body = syncBody(dnd5eCharacter(), dnd5eWorld, null, "modern");
+  assert.deepEqual(body.derivedTotals, totals);
+
+  const legacy = syncBody(dnd5eCharacter(), dnd5eWorld, null, "legacy");
+  assert.equal(legacy.derivedTotals.rules, "legacy");
+});
+
+test("a dnd5e character pushed without a rules version still carries totals, with empty rules", () => {
+  assert.equal(syncBody(dnd5eCharacter(), dnd5eWorld).derivedTotals.rules, "");
+  assert.equal("derivedTotals" in syncBody({ ...dnd5eCharacter(), system: {} }, dnd5eWorld, null, "modern"), false);
+});
+
 test("std8 flaggedFileId reads the sheet flag's file, else the sync flag's, whoever owns them", () => {
   const copied = { sheet: { fileId: 5, documentUuid: "Actor.A1" }, sync: { characterFileId: 9, documentUuid: "Actor.A1" } };
   assert.equal(flaggedFileId(flagged("Actor.B2", copied)), 5);

@@ -7,7 +7,7 @@ import {
   MODULE_ID, readAutoSendCombat, readCombatSync, readCollapsedSections, readWorldLink,
   writeAutoSendCombat, writeCollapsedSections, writeCombatSync, writeWorldLink
 } from "../config/ModuleSettings.mjs";
-import { userRows, worldInfo } from "../config/WorldInfo.mjs";
+import { dnd5eRulesVersion, userRows, worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { CombatantInspector } from "./CombatantInspector.mjs";
 import { CombatPayloadPreview } from "./CombatPayloadPreview.mjs";
@@ -149,7 +149,8 @@ async function pushCharacter(actor, link) {
   }
   let result;
   try {
-    result = await organizr.pushCharacter(link, syncBody(actor, worldInfo(), (key) => game.i18n.localize(key)));
+    const body = syncBody(actor, worldInfo(), (key) => game.i18n.localize(key), dnd5eRulesVersion());
+    result = await organizr.pushCharacter(link, body);
   } catch (error) {
     const key = syncErrorKey(error.status ?? -1);
     ui.notifications.error(key, { localize: true, format: { name: actor.name, message: error.message } });

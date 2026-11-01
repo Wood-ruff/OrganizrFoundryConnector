@@ -9,6 +9,12 @@ export function worldInfo() {
   };
 }
 
+/** The world's dnd5e rules version ("modern" or "legacy"); empty in other systems. */
+export function dnd5eRulesVersion() {
+  if (game.system.id !== "dnd5e") return "";
+  return game.settings.get("dnd5e", "rulesVersion") ?? "";
+}
+
 /** Users as plain rows for the services. */
 export function userRows() {
   return game.users.map((user) => ({ id: user.id, name: user.name, isGM: user.isGM }));

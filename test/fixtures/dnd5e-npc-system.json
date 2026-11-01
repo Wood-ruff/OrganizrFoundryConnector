@@ -1,0 +1,1254 @@
+{
+  "abilities": {
+    "str": {
+      "value": 19,
+      "proficient": 0,
+      "max": 20,
+      "bonuses": {},
+      "attack": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0,
+          "modeCounts": {
+            "override": null,
+            "advantages": {
+              "count": 0,
+              "suppressed": false
+            },
+            "disadvantages": {
+              "count": 0,
+              "suppressed": false
+            }
+          }
+        },
+        "value": 7,
+        "bonus": 0
+      },
+      "check": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0,
+          "modeCounts": {
+            "override": null,
+            "advantages": {
+              "count": 0,
+              "suppressed": false
+            },
+            "disadvantages": {
+              "count": 0,
+              "suppressed": false
+            }
+          }
+        },
+        "value": 4,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "save": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 4,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "mod": 4,
+      "dc": 15
+    },
+    "dex": {
+      "value": 13,
+      "proficient": 0,
+      "max": 20,
+      "bonuses": {},
+      "attack": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 4,
+        "bonus": 0
+      },
+      "check": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0,
+          "modeCounts": {
+            "override": null,
+            "advantages": {
+              "count": 0,
+              "suppressed": false
+            },
+            "disadvantages": {
+              "count": 0,
+              "suppressed": false
+            }
+          }
+        },
+        "value": 1,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "save": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 1,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "mod": 1,
+      "dc": 12
+    },
+    "con": {
+      "value": 17,
+      "proficient": 1,
+      "max": 20,
+      "bonuses": {},
+      "attack": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 6,
+        "bonus": 0
+      },
+      "check": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 3,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "save": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 6,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 1,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "mod": 3,
+      "dc": 14
+    },
+    "int": {
+      "value": 11,
+      "proficient": 0,
+      "max": 20,
+      "bonuses": {},
+      "attack": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 3,
+        "bonus": 0
+      },
+      "check": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0,
+          "modeCounts": {
+            "override": null,
+            "advantages": {
+              "count": 0,
+              "suppressed": false
+            },
+            "disadvantages": {
+              "count": 0,
+              "suppressed": false
+            }
+          }
+        },
+        "value": 0,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "save": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 0,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "mod": 0,
+      "dc": 11
+    },
+    "wis": {
+      "value": 15,
+      "proficient": 1,
+      "max": 20,
+      "bonuses": {},
+      "attack": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 5,
+        "bonus": 0
+      },
+      "check": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0,
+          "modeCounts": {
+            "override": null,
+            "advantages": {
+              "count": 0,
+              "suppressed": false
+            },
+            "disadvantages": {
+              "count": 0,
+              "suppressed": false
+            }
+          }
+        },
+        "value": 2,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "save": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 5,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 1,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "mod": 2,
+      "dc": 13
+    },
+    "cha": {
+      "value": 16,
+      "proficient": 0,
+      "max": 20,
+      "bonuses": {},
+      "attack": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0,
+          "modeCounts": {
+            "override": null,
+            "advantages": {
+              "count": 0,
+              "suppressed": false
+            },
+            "disadvantages": {
+              "count": 0,
+              "suppressed": false
+            }
+          }
+        },
+        "value": 6,
+        "bonus": 0
+      },
+      "check": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0,
+          "modeCounts": {
+            "override": null,
+            "advantages": {
+              "count": 0,
+              "suppressed": false
+            },
+            "disadvantages": {
+              "count": 0,
+              "suppressed": false
+            }
+          }
+        },
+        "value": 3,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "save": {
+        "roll": {
+          "min": null,
+          "max": null,
+          "mode": 0
+        },
+        "value": 3,
+        "prof": {
+          "deterministic": false,
+          "_baseProficiency": 3,
+          "multiplier": 0,
+          "rounding": "down"
+        },
+        "bonus": 0
+      },
+      "mod": 3,
+      "dc": 14
+    }
+  },
+  "attributes": {
+    "ac": {
+      "armor": 10,
+      "base": 15,
+      "bonus": 0,
+      "calc": "natural",
+      "calcs": {},
+      "cover": 0,
+      "flat": 15,
+      "formula": "@attributes.ac.flat",
+      "formulas": [
+        {
+          "label": "Natural Armor",
+          "formula": "@attributes.ac.flat",
+          "id": "natural",
+          "type": "base"
+        }
+      ],
+      "min": 0,
+      "override": null,
+      "shield": 0,
+      "label": "Natural Armor",
+      "clamped": {
+        "str": 4,
+        "dex": 1,
+        "con": 3,
+        "int": 0,
+        "wis": 2,
+        "cha": 3
+      },
+      "dex": 1,
+      "activeFormula": {
+        "label": "Natural Armor",
+        "formula": "@attributes.ac.flat",
+        "id": "natural",
+        "type": "base"
+      },
+      "value": 15
+    },
+    "encumbrance": {
+      "bonuses": {},
+      "multipliers": {
+        "encumbered": "1",
+        "heavilyEncumbered": "1",
+        "maximum": "1",
+        "overall": "1"
+      },
+      "value": 2.9,
+      "thresholds": {
+        "encumbered": 190,
+        "heavilyEncumbered": 380,
+        "maximum": 570
+      },
+      "max": 570,
+      "mod": 2,
+      "stops": {
+        "encumbered": 33.333333333333336,
+        "heavilyEncumbered": 66.66666666666667
+      },
+      "pct": 0.5087719298245614,
+      "encumbered": false
+    },
+    "init": {
+      "ability": "",
+      "roll": {
+        "bonus": "2",
+        "min": null,
+        "max": null,
+        "mode": 0
+      },
+      "bonuses": {},
+      "mod": 1,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "total": 3,
+      "score": 13
+    },
+    "movement": {
+      "multiplier": 1,
+      "speeds": {
+        "walk": 30,
+        "burrow": 0,
+        "climb": 0,
+        "fly": 60,
+        "jump": 9.5,
+        "swim": 0
+      },
+      "units": "ft",
+      "hover": true,
+      "ignoredDifficultTerrain": {},
+      "walk": 30,
+      "burrow": 0,
+      "climb": 0,
+      "fly": 60,
+      "jump": 9.5,
+      "swim": 0,
+      "speed": 30,
+      "max": 60,
+      "slowed": false
+    },
+    "attunement": {
+      "max": 3,
+      "value": 0
+    },
+    "senses": {
+      "ranges": {
+        "blindsight": 10,
+        "darkvision": 60,
+        "tremorsense": 0,
+        "truesight": 0
+      },
+      "units": "ft",
+      "special": "sees heat shimmer",
+      "darkvision": 60,
+      "blindsight": 10,
+      "tremorsense": 0,
+      "truesight": 0
+    },
+    "spell": {
+      "level": 5,
+      "abilityLabel": "Charisma",
+      "attack": 6,
+      "dc": 14,
+      "mod": 3
+    },
+    "spellcasting": "cha",
+    "exhaustion": 0,
+    "concentration": {
+      "ability": "",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0
+      },
+      "bonuses": {},
+      "limit": 1,
+      "save": 6
+    },
+    "loyalty": {},
+    "hd": {
+      "value": 13,
+      "max": 13
+    },
+    "hp": {
+      "max": 110,
+      "temp": 5,
+      "tempmax": 0,
+      "value": 100,
+      "bloodied": 50,
+      "formula": "13d10 + 39",
+      "effectiveMax": 110,
+      "damage": 10,
+      "pct": 90.9090909090909
+    },
+    "death": {
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0
+      },
+      "success": 0,
+      "failure": 0,
+      "bonuses": {}
+    },
+    "price": {
+      "value": null,
+      "denomination": "gp"
+    },
+    "prof": 3
+  },
+  "details": {
+    "level": 0,
+    "cr": 5
+  },
+  "skills": {
+    "acr": {
+      "ability": "dex",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 1,
+      "proficient": 0,
+      "total": 1,
+      "passive": 11
+    },
+    "ani": {
+      "ability": "wis",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 2,
+      "proficient": 0,
+      "total": 2,
+      "passive": 12
+    },
+    "arc": {
+      "ability": "int",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 0,
+      "proficient": 0,
+      "total": 0,
+      "passive": 10
+    },
+    "ath": {
+      "ability": "str",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 1,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 1,
+        "rounding": "down"
+      },
+      "effectValue": 1,
+      "bonus": 0,
+      "mod": 4,
+      "proficient": 1,
+      "total": 7,
+      "passive": 17
+    },
+    "dec": {
+      "ability": "cha",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 3,
+      "proficient": 0,
+      "total": 3,
+      "passive": 13
+    },
+    "his": {
+      "ability": "int",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 0,
+      "proficient": 0,
+      "total": 0,
+      "passive": 10
+    },
+    "ins": {
+      "ability": "wis",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 2,
+      "proficient": 0,
+      "total": 2,
+      "passive": 12
+    },
+    "itm": {
+      "ability": "cha",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 3,
+      "proficient": 0,
+      "total": 3,
+      "passive": 13
+    },
+    "inv": {
+      "ability": "int",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 0,
+      "proficient": 0,
+      "total": 0,
+      "passive": 10
+    },
+    "med": {
+      "ability": "wis",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 2,
+      "proficient": 0,
+      "total": 2,
+      "passive": 12
+    },
+    "nat": {
+      "ability": "int",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 0,
+      "proficient": 0,
+      "total": 0,
+      "passive": 10
+    },
+    "prc": {
+      "ability": "wis",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 1,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 1,
+        "rounding": "down"
+      },
+      "effectValue": 1,
+      "bonus": 0,
+      "mod": 2,
+      "proficient": 1,
+      "total": 5,
+      "passive": 15
+    },
+    "prf": {
+      "ability": "cha",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 3,
+      "proficient": 0,
+      "total": 3,
+      "passive": 13
+    },
+    "per": {
+      "ability": "cha",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 3,
+      "proficient": 0,
+      "total": 3,
+      "passive": 13
+    },
+    "rel": {
+      "ability": "int",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 0,
+      "proficient": 0,
+      "total": 0,
+      "passive": 10
+    },
+    "slt": {
+      "ability": "dex",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 1,
+      "proficient": 0,
+      "total": 1,
+      "passive": 11
+    },
+    "ste": {
+      "ability": "dex",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 2,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 2,
+        "rounding": "down"
+      },
+      "effectValue": 2,
+      "bonus": 0,
+      "mod": 1,
+      "proficient": 2,
+      "total": 7,
+      "passive": 17
+    },
+    "sur": {
+      "ability": "wis",
+      "roll": {
+        "min": null,
+        "max": null,
+        "mode": 0,
+        "modeCounts": {
+          "override": null,
+          "advantages": {
+            "count": 0,
+            "suppressed": false
+          },
+          "disadvantages": {
+            "count": 0,
+            "suppressed": false
+          }
+        }
+      },
+      "bonuses": {
+        "passive": ""
+      },
+      "value": 0,
+      "prof": {
+        "deterministic": false,
+        "_baseProficiency": 3,
+        "multiplier": 0,
+        "rounding": "down"
+      },
+      "effectValue": 0,
+      "bonus": 0,
+      "mod": 2,
+      "proficient": 0,
+      "total": 2,
+      "passive": 12
+    }
+  },
+  "spells": {
+    "spell1": {
+      "value": 0,
+      "override": null,
+      "label": "1st Level",
+      "level": 1,
+      "max": 4,
+      "type": "spell"
+    },
+    "spell2": {
+      "value": 0,
+      "override": null,
+      "label": "2nd Level",
+      "level": 2,
+      "max": 3,
+      "type": "spell"
+    },
+    "spell3": {
+      "value": 0,
+      "override": null,
+      "label": "3rd Level",
+      "level": 3,
+      "max": 2,
+      "type": "spell"
+    },
+    "spell4": {
+      "value": 0,
+      "override": null,
+      "label": "4th Level",
+      "level": 4,
+      "max": 0,
+      "type": "spell"
+    },
+    "spell5": {
+      "value": 0,
+      "override": null,
+      "label": "5th Level",
+      "level": 5,
+      "max": 0,
+      "type": "spell"
+    },
+    "spell6": {
+      "value": 0,
+      "override": null,
+      "label": "6th Level",
+      "level": 6,
+      "max": 0,
+      "type": "spell"
+    },
+    "spell7": {
+      "value": 0,
+      "override": null,
+      "label": "7th Level",
+      "level": 7,
+      "max": 0,
+      "type": "spell"
+    },
+    "spell8": {
+      "value": 0,
+      "override": null,
+      "label": "8th Level",
+      "level": 8,
+      "max": 0,
+      "type": "spell"
+    },
+    "spell9": {
+      "value": 0,
+      "override": null,
+      "label": "9th Level",
+      "level": 9,
+      "max": 0,
+      "type": "spell"
+    },
+    "pact": {
+      "value": 0,
+      "override": null,
+      "type": "pact",
+      "label": "Pact Magic"
+    }
+  },
+  "tools": {}
+}
