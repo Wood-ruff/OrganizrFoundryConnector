@@ -71,6 +71,13 @@ export function createOrganizrClient(fetchImpl = globalThis.fetch) {
       return readJson(response);
     },
 
+    async fetchCharacterRecipe({ serverUrl, apiToken }, fileId, systemId) {
+      const query = systemId ? `?system=${encodeURIComponent(systemId)}` : "";
+      const url = `${serverUrl}/api/foundry/sheets/${encodeURIComponent(fileId)}/recipe${query}`;
+      const response = await send(fetchImpl, url, apiToken, { method: "GET" });
+      return readJson(response);
+    },
+
     async linkSheet({ serverUrl, apiToken }, fileId, body) {
       const url = `${serverUrl}/api/foundry/sheets/${encodeURIComponent(fileId)}/link`;
       const response = await send(fetchImpl, url, apiToken, { method: "POST", body });

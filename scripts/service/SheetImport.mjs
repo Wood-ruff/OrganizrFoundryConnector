@@ -6,6 +6,7 @@ import { knownFileId } from "./CharacterSync.mjs";
 const IMPORTABLE_TYPES = ["npc", "item", "spell", "action", "loot"];
 const CHARACTER_TYPE = "character";
 const EXPORTED_CHARACTER_SYSTEMS = ["pf1e", "dnd5e"];
+const RECIPE_CHARACTER_SYSTEM = "pf2e";
 const DEFAULT_TOKEN_IMAGE = "icons/svg/mystery-man.svg";
 const SYSTEM_DEFAULT_ICONS = [/^systems\/[^/]+\/icons\/default-icons\//, /^systems\/dnd5e\/icons\/svg\/(actors|items)\//];
 const CONTENTS_SYSTEM_ID = "dnd5e";
@@ -20,10 +21,15 @@ const IMAGE_EXTENSIONS = {
   "image/svg+xml": "svg"
 };
 
-/** Whether Organizr can export this sheet kind as a Foundry document; characters only when their system is pf1e or dnd5e. */
+/** Whether this sheet kind can be imported; characters only when their system is pf1e, dnd5e or pf2e. */
 export function isImportable(type, system) {
-  if (type === CHARACTER_TYPE) return EXPORTED_CHARACTER_SYSTEMS.includes(system);
+  if (type === CHARACTER_TYPE) return EXPORTED_CHARACTER_SYSTEMS.includes(system) || buildsFromRecipe(type, system);
   return IMPORTABLE_TYPES.includes(type);
+}
+
+/** Whether the sheet is built in Foundry from its build recipe instead of imported as a document: pf2e characters. */
+export function buildsFromRecipe(type, system) {
+  return type === CHARACTER_TYPE && system === RECIPE_CHARACTER_SYSTEM;
 }
 
 /** The Organizr origin stamped on an imported document, or null. */

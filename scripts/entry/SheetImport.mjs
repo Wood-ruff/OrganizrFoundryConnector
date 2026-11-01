@@ -1,23 +1,19 @@
 import {
-  appliesPortrait, contentsReplacement, documentKind, holdsContents, linkBody, linkedIndex, pickLinked, portraitFileName,
-  sheetFlag, withDocumentUuid, withPortrait, withRequestedFileId
+  appliesPortrait, contentsReplacement, documentKind, holdsContents, withRequestedFileId
 } from "../service/SheetImport.mjs";
 import { createSeed, importDataApplies, refreshedDocument, seededDocument } from "../service/DocumentRefresh.mjs";
 import { dnd5eSlotsSpent, dnd5eSlotUpdates, isDnd5eData } from "../service/Dnd5ePlayState.mjs";
 import {
   companionData, companionFolderData, contentCompanions, isCompanionFolderOf, isCompanionOf, splitPayload
 } from "../service/Companions.mjs";
-import { MODULE_ID, readWorldLink } from "../config/ModuleSettings.mjs";
+import { readWorldLink } from "../config/ModuleSettings.mjs";
 import { worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
-import { storePortrait } from "../persistence/PortraitStore.mjs";
+import { linkedCopy, recordLink, stampDocumentUuid, withStoredPortrait } from "./ImportSteps.mjs";
+
+export { linkedWorldDocuments } from "./ImportSteps.mjs";
 
 const organizr = createOrganizrClient();
-
-/** Every world actor and item that was imported from an Organizr sheet, by file id (all copies per id). */
-export function linkedWorldDocuments() {
-  return linkedIndex([...game.actors.contents, ...game.items.contents]);
-}
 
 /**
  * Imports one Organizr sheet into this world: fetches its Foundry document and companions, stores an actor portrait,
@@ -47,33 +43,6 @@ export async function importSheet(fileId, { recordedUuid = null, restoreInventor
   const companionOutcome = await importCompanions(companions, fileId, result.name, world.systemId);
   await recordLink(link, fileId, result, world, warnings);
   return { name: result.name, uuid: result.uuid, updated: Boolean(target), warnings, duplicates, companions: companionOutcome };
-}
-
-function linkedCopy(fileId, kind, recordedUuid) {
-  const copies = linkedWorldDocuments().get(String(fileId)) ?? [];
-  return pickLinked(copies.filter((copy) => copy.documentName === kind), recordedUuid);
-}
-
-async function withStoredPortrait(data, link, warnings) {
-  const portraitId = sheetFlag(data)?.portraitFileId;
-  if (!portraitId) return data;
-  try {
-    const blob = await organizr.fetchFileBlob(link, portraitId);
-    const fileName = portraitFileName(portraitId, blob.type);
-    if (!fileName) throw new Error(`unsupported image type ${blob.type}`);
-    return withPortrait(data, await storePortrait(blob, fileName));
-  } catch (error) {
-    console.warn("Organizr connector: portrait not stored", error);
-    warnings.push("ORGANIZR.Browser.PortraitFailed");
-    return data;
-  }
-}
-
-/** Writes the document's own uuid into its sheet flag, so a later Duplicate of it is known as a copy. */
-async function stampDocumentUuid(document) {
-  const flag = sheetFlag(document);
-  if (!flag || flag.documentUuid === document.uuid) return;
-  await document.setFlag(MODULE_ID, "sheet", withDocumentUuid(flag, document.uuid));
 }
 
 async function refreshDocument(target, document, restoreInventory) {
@@ -165,13 +134,4 @@ async function importCompanion(companion, ownerFileId, ownerName, systemId, fold
 
 function findCompanionFolder(ownerFileId) {
   return game.folders.find((folder) => isCompanionFolderOf(folder, ownerFileId)) ?? null;
-}
-
-async function recordLink(link, fileId, document, world, warnings) {
-  try {
-    await organizr.linkSheet(link, fileId, linkBody(document.uuid, world.id));
-  } catch (error) {
-    console.warn("Organizr connector: link not recorded", error);
-    warnings.push("ORGANIZR.Browser.LinkFailed");
-  }
 }

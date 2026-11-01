@@ -134,6 +134,37 @@ test("a 422 from the document endpoint carries the server's reason", async () =>
   await assert.rejects(client.fetchFoundryDocument(link, 5, "pf2e"), { status: 422, message: "\"Guard.npc\" is a dnd5e sheet; this world runs pf2e" });
 });
 
+test("fetchCharacterRecipe asks the recipe path for the world's system", async () => {
+  const calls = [];
+  const payload = { document: { name: "Tamsin Vale", type: "character" }, recipe: { format: "organizr-pf2e-recipe", version: 1 } };
+  const client = createOrganizrClient(fakeFetch(200, payload, calls));
+  const answer = await client.fetchCharacterRecipe(link, 41, "pf2e");
+  assert.deepEqual(answer, payload);
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/sheets/41/recipe?system=pf2e");
+  assert.equal(calls[0].init.method, "GET");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer org_secret");
+  assert.equal(calls[0].init.body, undefined);
+});
+
+test("fetchCharacterRecipe without a system sends no query", async () => {
+  const calls = [];
+  await createOrganizrClient(fakeFetch(200, {}, calls)).fetchCharacterRecipe(link, "41", "");
+  assert.equal(calls[0].url, "https://organizr.example/api/foundry/sheets/41/recipe");
+});
+
+test("fetchCharacterRecipe passes the server's refusal through with its status", async () => {
+  const refusal = "This pf2e character has no class; the Foundry connector builds characters with a class only.";
+  const client = createOrganizrClient(fakeFetch(422, { error: refusal }, []));
+  await assert.rejects(client.fetchCharacterRecipe(link, 41, "pf2e"), (error) => {
+    assert.ok(error instanceof OrganizrRequestError);
+    assert.equal(error.status, 422);
+    assert.equal(error.message, refusal);
+    return true;
+  });
+  await assert.rejects(createOrganizrClient(fakeFetch(403, undefined, [])).fetchCharacterRecipe(link, 41, "pf2e"),
+    { status: 403, message: "HTTP 403" });
+});
+
 test("linkSheet posts the Foundry uuid to the sheet's link path", async () => {
   const calls = [];
   const client = createOrganizrClient(fakeFetch(200, { fileId: 5, uuid: "Actor.Ab12" }, calls));

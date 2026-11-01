@@ -1,24 +1,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  appliesPortrait, contentsReplacement, documentKind, strayContentIds, holdsContents, importErrorKey, isImportable, linkBody, linkedIndex,
+  appliesPortrait, buildsFromRecipe, contentsReplacement, documentKind, strayContentIds, holdsContents, importErrorKey, isImportable, linkBody, linkedIndex,
   pickLinked, portraitFileName, sheetFlag, withDocumentUuid, withPortrait, withRequestedFileId
 } from "../scripts/service/SheetImport.mjs";
 
 const documentTypes = { Actor: ["character", "npc", "loot"], Item: ["weapon", "spell", "action"] };
 
-test("NPC, item, spell, action and loot sheets are importable in every system, characters only in pf1e and dnd5e", () => {
+test("NPC, item, spell, action and loot sheets are importable in every system, characters in pf1e, dnd5e and pf2e", () => {
   for (const type of ["npc", "item", "spell", "action", "loot"]) {
     assert.equal(isImportable(type), true);
     assert.equal(isImportable(type, "pf2e"), true);
   }
   assert.equal(isImportable("character", "pf1e"), true);
   assert.equal(isImportable("character", "dnd5e"), true);
-  assert.equal(isImportable("character", "pf2e"), false);
+  assert.equal(isImportable("character", "pf2e"), true);
+  assert.equal(isImportable("character", "PF2E"), false);
   assert.equal(isImportable("character", ""), false);
   assert.equal(isImportable("character"), false);
   assert.equal(isImportable("status", "pf1e"), false);
   assert.equal(isImportable(undefined), false);
+});
+
+test("only pf2e characters are built from a recipe", () => {
+  assert.equal(buildsFromRecipe("character", "pf2e"), true);
+  assert.equal(buildsFromRecipe("character", "pf1e"), false);
+  assert.equal(buildsFromRecipe("character", "dnd5e"), false);
+  assert.equal(buildsFromRecipe("character", ""), false);
+  assert.equal(buildsFromRecipe("character"), false);
+  for (const type of ["npc", "item", "spell", "action", "loot", "status", undefined]) {
+    assert.equal(buildsFromRecipe(type, "pf2e"), false);
+  }
 });
 
 test("sheetFlag reads the module's sheet flag and tolerates missing flags", () => {
