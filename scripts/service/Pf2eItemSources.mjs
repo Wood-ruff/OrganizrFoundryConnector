@@ -41,6 +41,12 @@ export function buildKeyOf(itemSource) {
   return typeof key === "string" ? key : null;
 }
 
+/** The key of the recipe entry an item the build did not create stands in for (`build.covers`), or null. */
+export function coversOf(itemSource) {
+  const key = itemSource?.flags?.[MODULE_ID]?.build?.covers;
+  return typeof key === "string" ? key : null;
+}
+
 /** The build id of the actor whose build created this item source, or null (none recorded). */
 export function buildOwnerOf(itemSource) {
   const owner = itemSource?.flags?.[MODULE_ID]?.build?.owner;

@@ -8,8 +8,9 @@ const MODULE = "organizr-foundry-connector";
 
 globalThis.game = { pf2e: { system: { sluggify } } };
 
-function fakeActor(onCreate = () => {}) {
-  const items = new Map();
+function fakeActor(onCreate = () => {}, held = []) {
+  const items = new Map(held.map((item) => [item.id, item]));
+  const itemUpdates = [];
   let next = 1;
   const created = (source) => {
     const id = `item${String(next++).padStart(12, "0")}`;
@@ -22,11 +23,14 @@ function fakeActor(onCreate = () => {}) {
     level: 1,
     feats: [],
     items: { get: (id) => items.get(id), [Symbol.iterator]: () => items.values() },
+    itemUpdates,
     async createEmbeddedDocuments(type, sources) {
       onCreate(sources);
       return sources.map(created);
     },
-    async updateEmbeddedDocuments() {}
+    async updateEmbeddedDocuments(type, updates) {
+      itemUpdates.push(...updates);
+    }
   };
 }
 
@@ -168,4 +172,62 @@ test("without those choices every gear entry and the coins are created", async (
   await writeBuildItems(actor, GEAR_RECIPE, gearPlanOf(), recipeEvidence(GEAR_RECIPE, sluggify));
 
   assert.deepEqual([...actor.items].map((item) => item.name), ["Silk Rope", "Mint Tonic", "Gold Pieces"]);
+});
+
+function heldItem(id, name, type, system = {}) {
+  return { id, _id: id, name, type, system: { slug: sluggify(name), ...system }, flags: {} };
+}
+
+test("items the linked sheets were pushed from become roots instead of copies and a taken-over pack still holds gear", async () => {
+  const recipe = {
+    inventory: [
+      { key: "i:25", name: "Reed Pack", quantity: 1, equipped: false, container: null, foundryItemId: "handpack00000001" },
+      { key: "i:24", name: "Field Rations", quantity: 3, equipped: false, container: "i:25", foundryItemId: "handrations00001" },
+      { key: "i:26", name: "Silk Rope", quantity: 1, equipped: false, container: "i:25", foundryItemId: null }
+    ]
+  };
+  const plan = planOf([
+    ["i:25", gearOf("Reed Pack", "backpack", "i:25")],
+    ["i:24", gearOf("Field Rations", "consumable", "i:24")],
+    ["i:26", gearOf("Silk Rope", "equipment", "i:26")]
+  ]);
+  plan.buildId = "ownbuild00000001";
+  const actor = fakeActor(() => {}, [
+    heldItem("handpack00000001", "Reed Pack", "backpack"),
+    heldItem("handrations00001", "Field Rations", "consumable", { quantity: 2, containerId: "handpack00000001" })
+  ]);
+
+  await writeBuildItems(actor, recipe, plan, recipeEvidence(recipe, sluggify));
+
+  const items = [...actor.items];
+  assert.deepEqual(items.map((item) => item.name), ["Reed Pack", "Field Rations", "Silk Rope"]);
+  assert.equal(items[2].system.containerId, "handpack00000001");
+  assert.equal(items[1].system.quantity, 2);
+  const flag = `flags.${MODULE}.build`;
+  assert.deepEqual(actor.itemUpdates, [
+    { _id: "handpack00000001", [flag]: { key: "i:25", owner: "ownbuild00000001" } },
+    { _id: "handrations00001", [flag]: { key: "i:24", owner: "ownbuild00000001" } }
+  ]);
+});
+
+test("a feature or action an item pf2e granted already holds is not created and that item gets the entry's cover mark", async () => {
+  const recipe = {
+    features: [{ key: "f:61", name: "Steady Guard", category: "classfeature", level: 1 }],
+    actions: [{ key: "a:62", name: "Reed Step" }]
+  };
+  const plan = planOf([
+    ["f:61", featSource("Steady Guard", "classfeature", "f:61")],
+    ["a:62", flagged({ name: "Reed Step", type: "action", system: { slug: "reed-step" } }, "a:62")]
+  ]);
+  const actor = fakeActor(() => {}, [
+    heldItem("grantedguard0001", "Steady Guard", "feat"), heldItem("grantedstep00001", "Reed Step", "action")
+  ]);
+
+  await writeBuildItems(actor, recipe, plan, recipeEvidence(recipe, sluggify));
+
+  assert.equal([...actor.items].length, 2);
+  const covers = `flags.${MODULE}.build.covers`;
+  assert.deepEqual(actor.itemUpdates, [
+    { _id: "grantedguard0001", [covers]: "f:61" }, { _id: "grantedstep00001", [covers]: "a:62" }
+  ]);
 });

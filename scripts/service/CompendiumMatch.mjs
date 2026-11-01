@@ -79,13 +79,18 @@ export function entryOutcome(match, entry) {
  * name only by the same full name, any other by name (case-insensitive) or by `system.slug`.
  */
 export function isCovered(entry, actorItems, sluggify) {
+  return coveringItem(entry, actorItems, sluggify) !== null;
+}
+
+/** The first actor item that holds the entry under the `isCovered` rules, or null. */
+export function coveringItem(entry, actorItems, sluggify) {
   const name = typeof entry?.name === "string" ? entry.name.trim() : "";
-  if (name === "") return false;
+  if (name === "") return null;
   const types = isSpellEntry(entry) ? COVERING_TYPES.spell : COVERING_TYPES.other;
   const candidates = [...(actorItems ?? [])].filter((item) => types.includes(item?.type));
-  if (baseName(name).suffix !== null) return candidates.some((item) => sameName(item?.name, name));
+  if (baseName(name).suffix !== null) return candidates.find((item) => sameName(item?.name, name)) ?? null;
   const slug = sluggify(name);
-  return candidates.some((item) => sameName(item?.name, name) || item?.system?.slug === slug);
+  return candidates.find((item) => sameName(item?.name, name) || item?.system?.slug === slug) ?? null;
 }
 
 function hitsForName(name, rows, sluggify) {

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  ITEM_TYPES, PACKS, allowsBaseName, candidateRows, entryOutcome, isCovered, matchEntry
+  ITEM_TYPES, PACKS, allowsBaseName, candidateRows, coveringItem, entryOutcome, isCovered, matchEntry
 } from "../scripts/service/CompendiumMatch.mjs";
 import { sluggify } from "./support/sluggify.mjs";
 
@@ -180,4 +180,13 @@ test("other item types and blank names never cover", () => {
   assert.equal(isCovered({ key: "f:n:toughness", name: "Toughness" }, items, sluggify), false);
   assert.equal(isCovered({ key: "f:n:blank", name: " " }, [{ name: " ", type: "feat" }], sluggify), false);
   assert.equal(isCovered({ key: "f:n:x", name: "X" }, null, sluggify), false);
+});
+
+test("the covering item is the first one isCovered finds, null when none holds the entry", () => {
+  const granted = { _id: "grantedstep00001", name: "Reed Step", type: "action", system: { slug: "reed-step" } };
+  const bySlug = { _id: "slugstep00000001", name: "Step of Reeds", type: "feat", system: { slug: "reed-step" } };
+  assert.equal(coveringItem({ key: "a:n:reed-step", name: "Reed Step" }, [granted, bySlug], sluggify), granted);
+  assert.equal(coveringItem({ key: "a:n:reed-step", name: "Reed Step" }, [bySlug], sluggify), bySlug);
+  assert.equal(coveringItem({ key: "a:n:marsh-howl", name: "Marsh Howl" }, [granted], sluggify), null);
+  assert.equal(coveringItem({ key: "a:n:blank", name: "" }, [granted], sluggify), null);
 });

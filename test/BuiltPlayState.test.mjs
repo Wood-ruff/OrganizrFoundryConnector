@@ -428,3 +428,13 @@ test("a duplicated spell with a root's key neither gives nor takes the root's in
     { _id: "spellglow000001", "system.location.uses.value": 1 }
   ]);
 });
+
+test("an item marked as covering an entry is no root of the snapshot, so a rebuild never recreates it under that key", () => {
+  const actor = builtActor();
+  actor.items.push(item("grantedstep00001", "action", "Reed Step", {}, {
+    flags: { [MODULE]: { build: { covers: "a:14" } } }
+  }));
+  const snapshot = snapshotPlayState(actor);
+  assert.equal(snapshot.roots.has("a:14"), false);
+  assert.equal(keptRootId(snapshot, "a:14"), null);
+});

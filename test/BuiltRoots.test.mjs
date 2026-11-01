@@ -100,3 +100,15 @@ test("kept items with a key that is not their own root lose the build flag; root
   ]);
   assert.deepEqual(strayKeyUpdates(actorWith({ version: 1, id: OWN }, [])), []);
 });
+
+test("an item marked as covering an entry is no root: kept unless its granter goes, and never cleared as a stray", () => {
+  const actor = actorWith({ version: 1, id: OWN }, [
+    rooted("classfighter0001", "class", "Fighter", { key: "id:class", owner: OWN }),
+    rooted("grantedstep00001", "action", "Reed Step", { covers: "a:14" }, {}),
+    rooted("handstep00000001", "feat", "Marsh Stride", { covers: "f:15" }, {})
+  ]);
+  actor.items[1].flags.pf2e = { grantedBy: { id: "classfighter0001" } };
+  assert.deepEqual([...ownRoots(actor).keys()], ["id:class"]);
+  assert.deepEqual(rootIdsToDelete(actor), ["classfighter0001", "grantedstep00001"]);
+  assert.deepEqual(strayKeyUpdates(actor), []);
+});

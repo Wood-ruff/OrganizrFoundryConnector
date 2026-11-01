@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildKeyOf, buildOwnerOf, compendiumSource, customSource, loreSources, slottedFeat, withBuildFlag, withBuildOwner
+  buildKeyOf, buildOwnerOf, compendiumSource, coversOf, customSource, loreSources, slottedFeat, withBuildFlag, withBuildOwner
 } from "../scripts/service/Pf2eItemSources.mjs";
 import { sluggify } from "./support/sluggify.mjs";
 
@@ -108,4 +108,12 @@ test("a source with a build key gets the build that creates it as owner; other s
   assert.deepEqual(withBuildOwner(plain, "ownbuild00000001"), plain);
   assert.notEqual(withBuildOwner(plain, "ownbuild00000001"), plain);
   assert.deepEqual(withBuildOwner(keyed, undefined), keyed);
+});
+
+test("the cover mark names the entry an item stands in for, apart from the build key", () => {
+  const granted = { name: "Reed Step", type: "action", flags: { [MODULE]: { build: { covers: "a:14" } } } };
+  assert.equal(coversOf(granted), "a:14");
+  assert.equal(buildKeyOf(granted), null);
+  assert.equal(coversOf(withBuildFlag(packFeat(), { key: "f:12" })), null);
+  assert.equal(coversOf(null), null);
 });

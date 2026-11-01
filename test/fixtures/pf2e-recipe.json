@@ -83,6 +83,7 @@
       "category": "class",
       "level": 2,
       "fileId": 101,
+      "foundryItemId": "goldenGuard00001",
       "document": {
         "name": "Steadfast Guard",
         "type": "feat",
@@ -142,6 +143,7 @@
       "category": "general",
       "level": 3,
       "fileId": null,
+      "foundryItemId": null,
       "document": null
     },
     {
@@ -150,6 +152,7 @@
       "category": "skill",
       "level": 2,
       "fileId": 199,
+      "foundryItemId": null,
       "document": null
     }
   ],
@@ -158,6 +161,7 @@
       "key": "a:102",
       "name": "Shield Shove",
       "fileId": 102,
+      "foundryItemId": "goldenShove00001",
       "document": {
         "name": "Shield Shove",
         "type": "action",
@@ -209,6 +213,7 @@
       "key": "a:n:quick-step",
       "name": "Quick Step",
       "fileId": null,
+      "foundryItemId": null,
       "document": null
     }
   ],
@@ -235,6 +240,7 @@
           "prepared": 0,
           "usesPerDay": 1,
           "fileId": 103,
+          "foundryItemId": "goldenSpark00001",
           "document": {
             "name": "Glimmer Spark",
             "type": "spell",
@@ -326,6 +332,7 @@
           "prepared": 0,
           "usesPerDay": null,
           "fileId": null,
+          "foundryItemId": null,
           "document": null
         }
       ]
@@ -345,6 +352,7 @@
         "property": []
       },
       "fileId": 104,
+      "foundryItemId": null,
       "document": {
         "name": "Cinder Blade",
         "type": "weapon",
@@ -478,6 +486,7 @@
       "container": null,
       "runes": null,
       "fileId": null,
+      "foundryItemId": null,
       "document": null
     },
     {
@@ -489,6 +498,7 @@
       "container": "i:n:satchel",
       "runes": null,
       "fileId": 105,
+      "foundryItemId": "goldenLantern001",
       "document": {
         "name": "Brass Lantern",
         "type": "equipment",
@@ -580,6 +590,7 @@
       "container": "i:n:satchel",
       "runes": null,
       "fileId": null,
+      "foundryItemId": null,
       "document": null
     },
     {
@@ -591,6 +602,7 @@
       "container": null,
       "runes": null,
       "fileId": 198,
+      "foundryItemId": null,
       "document": null
     }
   ],
@@ -667,7 +679,7 @@
     }
   },
   "notes": [
-    "2 hidden entries were left out.",
+    "3 hidden entries were left out.",
     "1 linked item sheet could not be loaded; its entry is built from pf2e's compendium only."
   ]
 }
