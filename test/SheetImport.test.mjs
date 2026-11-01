@@ -172,12 +172,21 @@ test("dnd5e actor and item icons count as default images, an own image does not"
   assert.equal(appliesPortrait("Item", { type: "container", img: "systems/dnd5e/icons/svg/items/container.svg" }), false);
 });
 
-test("only a container Item in a dnd5e world has its contents replaced on import", () => {
-  assert.equal(holdsContents("Item", { type: "container" }, "dnd5e"), true);
-  assert.equal(holdsContents("Item", { type: "container" }, "pf1"), false);
-  assert.equal(holdsContents("Item", { type: "loot" }, "dnd5e"), false);
-  assert.equal(holdsContents("Actor", { type: "container" }, "dnd5e"), false);
+function containerFrom(sheetType) {
+  return { type: "container", flags: { "organizr-foundry-connector": { sheet: { fileId: 77, type: sheetType } } } };
+}
+
+test("only a container Item from a loot sheet in a dnd5e world has its contents replaced on import", () => {
+  assert.equal(holdsContents("Item", containerFrom("loot"), "dnd5e"), true);
+  assert.equal(holdsContents("Item", containerFrom("loot"), "pf1"), false);
+  assert.equal(holdsContents("Item", { ...containerFrom("loot"), type: "loot" }, "dnd5e"), false);
+  assert.equal(holdsContents("Actor", containerFrom("loot"), "dnd5e"), false);
   assert.equal(holdsContents("Item", null, "dnd5e"), false);
+});
+
+test("a container from an item sheet keeps what it holds on import", () => {
+  assert.equal(holdsContents("Item", containerFrom("item"), "dnd5e"), false);
+  assert.equal(holdsContents("Item", { type: "container" }, "dnd5e"), false);
 });
 
 function satchelContents() {
@@ -197,12 +206,12 @@ function satchelContents() {
   ];
 }
 
-test("new contents are created in the container's order, pointing at its new id, flagged as its companions", () => {
+test("new contents are created in the container's order, pointing at its new id, flagged as its contents", () => {
   const plan = contentsReplacement("newSatchel000001", [], satchelContents(), { ownerFileId: 77 });
   assert.deepEqual(plan.deleteIds, []);
   assert.deepEqual(plan.create.map((data) => data.name), ["Tallow Candle Bundle", "Cracked Sunstone"]);
   assert.deepEqual(plan.create.map((data) => data.system.container), ["newSatchel000001", "newSatchel000001"]);
-  assert.deepEqual(plan.create[1].flags, { core: { a: 1 }, "organizr-foundry-connector": { companion: { fileId: 77, label: "Item: Cracked Sunstone" } } });
+  assert.deepEqual(plan.create[1].flags, { core: { a: 1 }, "organizr-foundry-connector": { content: { fileId: 77 } } });
 });
 
 test("a refresh deletes every current content and creates the exported ones; spent uses come back by name", () => {

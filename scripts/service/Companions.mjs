@@ -22,18 +22,15 @@ export function contentCompanions(payload) {
 
 /** The world Item data of one companion: its document flagged with the owner sheet and label, the sheet flag removed. */
 export function companionData(companion, ownerFileId) {
-  const data = structuredClone(companion.document);
-  const flags = data.flags ?? {};
-  const scope = { ...(flags[MODULE_ID] ?? {}) };
-  delete scope.sheet;
-  scope.companion = { fileId: Number(ownerFileId), label: companion.label };
-  data.flags = { ...flags, [MODULE_ID]: scope };
-  return data;
+  return dataFlaggedAs(companion, "companion", { fileId: Number(ownerFileId), label: companion.label });
 }
 
-/** The world Item data of one content companion, flagged like a companion and placed in the container with this id. */
+/**
+ * The world Item data of one content companion: flagged `content` with the owner sheet (an ordinary item, sendable on
+ * its own), the sheet flag removed, placed in the container with this id.
+ */
 export function contentData(companion, ownerFileId, containerId) {
-  const data = companionData(companion, ownerFileId);
+  const data = dataFlaggedAs(companion, "content", { fileId: Number(ownerFileId) });
   data.system = { ...(data.system ?? {}), container: containerId };
   return data;
 }
@@ -60,6 +57,16 @@ export function isCompanionFolderOf(folder, ownerFileId) {
   if (folder?.type !== "Item") return false;
   const owner = folder.flags?.[MODULE_ID]?.companionsOf;
   return owner !== undefined && owner !== null && String(owner) === String(ownerFileId);
+}
+
+function dataFlaggedAs(companion, flagKey, flag) {
+  const data = structuredClone(companion.document);
+  const flags = data.flags ?? {};
+  const scope = { ...(flags[MODULE_ID] ?? {}) };
+  delete scope.sheet;
+  scope[flagKey] = flag;
+  data.flags = { ...flags, [MODULE_ID]: scope };
+  return data;
 }
 
 function isWrappedPayload(payload) {

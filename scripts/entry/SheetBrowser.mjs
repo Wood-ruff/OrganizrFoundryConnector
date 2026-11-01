@@ -263,13 +263,13 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!sheets.length) return;
     const linked = linkedWorldDocuments();
     const systemId = worldInfo().systemId;
-    let plan = batchPlan(sheets, linked, false, systemId);
+    let plan = batchPlan(sheets, linked, false);
     let restoreInventory = false;
     if (needsBatchConfirm(plan)) {
       const answer = await this.#askFirst(() => confirmBatch(plan, systemId));
       if (!answer) return;
       restoreInventory = answer.restoreInventory && plan.skippedLoot.length > 0;
-      if (restoreInventory) plan = batchPlan(sheets, linked, true, systemId);
+      if (restoreInventory) plan = batchPlan(sheets, linked, true);
     }
     this.#importMany(plan, restoreInventory);
   }

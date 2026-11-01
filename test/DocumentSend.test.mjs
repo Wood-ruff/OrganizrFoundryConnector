@@ -4,6 +4,8 @@ import {
   containedItemsData, fitsSendLimit, isSendable, legacyFlagCandidates, needsRecordedUuid, ownsSheetFlag,
   ownsSheetFlagAmong, recordedUuidOf, sendBody, sendErrorKey, sendOutcome, sendsContents, sentFlag
 } from "../scripts/service/DocumentSend.mjs";
+import { companionData, contentData } from "../scripts/service/Companions.mjs";
+import { linkedIndex } from "../scripts/service/SheetImport.mjs";
 
 const MODULE = "organizr-foundry-connector";
 const link = { serverUrl: "https://organizr.example", apiToken: "org_secret", projectId: "12" };
@@ -69,6 +71,15 @@ test("coin, character, compendium and other kinds are not sendable", () => {
   assert.equal(isSendable({ type: "npc" }, "Item"), false);
   assert.equal(isSendable({ type: "weapon" }, "JournalEntry"), false);
   assert.equal(isSendable(null, "Actor"), false);
+});
+
+test("a container content imported from Organizr is sendable as its own item, an action companion is not", () => {
+  const potion = { label: "Item: Draught of Embers", document: { name: "Draught of Embers", type: "consumable", system: {} } };
+  const content = contentData(potion, 77, "chestFoundry0001");
+  assert.equal(isSendable(content, "Item", "dnd5e"), true);
+  assert.equal(isSendable({ ...content, system: {} }, "Item", "dnd5e"), true);
+  assert.equal(isSendable(companionData(potion, 77), "Item", "dnd5e"), false);
+  assert.equal(linkedIndex([content]).size, 0);
 });
 
 test("sentFlag keeps the previous portraitFileId and names the document", () => {

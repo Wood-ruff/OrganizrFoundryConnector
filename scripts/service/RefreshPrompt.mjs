@@ -45,6 +45,7 @@ export function batchPrompt(plan, systemId = "") {
     showRestore: plan.skippedLoot.length > 0,
     keepsKey: refreshKey("BatchKeeps", systemId),
     charactersKey: refreshKey("BatchCharacters", systemId),
-    restoreKey: refreshKey("RestoreInventory", systemId)
+    skippedKey: refreshKey("BatchSkipped", systemId),
+    restoreKey: refreshKey("BatchRestore", systemId)
   };
 }

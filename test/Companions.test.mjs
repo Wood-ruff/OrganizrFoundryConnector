@@ -104,12 +104,13 @@ test("a bare document or a payload without companions has no contents", () => {
   assert.deepEqual(contentCompanions(null), []);
 });
 
-test("content data points at the new container and carries the companion flag", () => {
+test("content data points at the new container and carries its own content flag, no companion flag", () => {
   const companion = candleContent();
   const data = contentData(companion, "77", "newSatchelId0001");
   assert.equal(data.system.container, "newSatchelId0001");
   assert.equal(data.system.quantity, 6);
-  assert.deepEqual(data.flags[MODULE], { companion: { fileId: 77, label: "Item: Tallow Candle Bundle" } });
+  assert.deepEqual(data.flags[MODULE], { content: { fileId: 77 } });
+  assert.equal(companionFlag(data), null);
   assert.equal(companion.document.system.container, "organizrbox00001");
   assert.equal(contentData({ label: "Item: Bare", document: { name: "Bare", type: "loot" } }, 77, "c1").system.container, "c1");
 });

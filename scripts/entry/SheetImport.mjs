@@ -3,6 +3,7 @@ import {
   sheetFlag, withDocumentUuid, withPortrait, withRequestedFileId
 } from "../service/SheetImport.mjs";
 import { createSeed, importDataApplies, refreshedDocument, seededDocument } from "../service/DocumentRefresh.mjs";
+import { dnd5eSlotsSpent, dnd5eSlotUpdates, isDnd5eData } from "../service/Dnd5ePlayState.mjs";
 import {
   companionData, companionFolderData, contentCompanions, isCompanionFolderOf, isCompanionOf, splitPayload
 } from "../service/Companions.mjs";
@@ -76,9 +77,18 @@ async function stampDocumentUuid(document) {
 }
 
 async function refreshDocument(target, document, restoreInventory) {
-  const replacement = refreshedDocument(target.toObject(), document, { restoreInventory });
+  const current = target.toObject();
+  const slotsSpent = isDnd5eData(current) ? dnd5eSlotsSpent(target.system?.spells) : {};
+  const replacement = refreshedDocument(current, document, { restoreInventory });
   await target.importFromJSON(JSON.stringify(replacement));
+  await spendSlotsAgain(target, slotsSpent);
   return target;
+}
+
+/** Spends a dnd5e actor's slots spent before the refresh again, against the maximum dnd5e derived for the new data. */
+async function spendSlotsAgain(target, slotsSpent) {
+  const updates = dnd5eSlotUpdates(slotsSpent, target.system?.spells);
+  if (Object.keys(updates).length) await target.update(updates);
 }
 
 /** Creates a blank document and fills it through Import Data, so the system's import filtering runs as on a refresh. */

@@ -6,7 +6,8 @@ import { batchPrompt, needsBatchConfirm, refreshPrompt } from "../scripts/servic
 const BATCH_KEYS = {
   keepsKey: "ORGANIZR.Refresh.BatchKeeps",
   charactersKey: "ORGANIZR.Refresh.BatchCharacters",
-  restoreKey: "ORGANIZR.Refresh.RestoreInventory"
+  skippedKey: "ORGANIZR.Refresh.BatchSkipped",
+  restoreKey: "ORGANIZR.Refresh.BatchRestore"
 };
 
 async function readLang() {
@@ -70,12 +71,18 @@ test("a dnd5e world reads its own actor, character, loot, restore and batch text
   const prompt = batchPrompt(plan, "dnd5e");
   assert.equal(prompt.keepsKey, `${dnd5e}.BatchKeeps`);
   assert.equal(prompt.charactersKey, `${dnd5e}.BatchCharacters`);
-  assert.equal(prompt.restoreKey, `${dnd5e}.RestoreInventory`);
+  assert.equal(prompt.skippedKey, `${dnd5e}.BatchSkipped`);
+  assert.equal(prompt.restoreKey, `${dnd5e}.BatchRestore`);
+});
+
+test("the pf batch restore box reads the same text as the single loot refresh", async () => {
+  const texts = (await readLang()).ORGANIZR.Refresh;
+  assert.equal(texts.BatchRestore, texts.RestoreInventory);
 });
 
 test("every dnd5e refresh text exists and names what a dnd5e refresh keeps", async () => {
   const texts = (await readLang()).ORGANIZR.Refresh.Dnd5e;
-  for (const key of ["ActorBody", "CharacterBody", "LootBody", "RestoreInventory", "BatchKeeps", "BatchCharacters"]) {
+  for (const key of ["ActorBody", "CharacterBody", "LootBody", "RestoreInventory", "BatchKeeps", "BatchCharacters", "BatchSkipped", "BatchRestore"]) {
     assert.equal(typeof texts[key], "string", key);
   }
   for (const text of [texts.ActorBody, texts.BatchKeeps]) {
@@ -86,6 +93,9 @@ test("every dnd5e refresh text exists and names what a dnd5e refresh keeps", asy
   }
   assert.match(texts.LootBody, /contents/);
   assert.doesNotMatch(texts.LootBody, /current inventory/);
-  assert.match(texts.BatchKeeps, /containers get Organizr's contents/);
+  assert.match(texts.BatchKeeps, /container from an item sheet keeps what it holds/);
+  assert.match(texts.BatchSkipped, /\{count\} containers/);
+  assert.match(texts.BatchRestore, /replaces what they hold/);
+  for (const text of [texts.ActorBody, texts.CharacterBody, texts.BatchKeeps]) assert.match(text, /spent spell slots/);
   assert.doesNotMatch(texts.BatchCharacters, /currency/);
 });

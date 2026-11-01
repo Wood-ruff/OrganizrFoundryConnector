@@ -25,15 +25,39 @@ export function isDnd5eData(data) {
 
 /**
  * Keeps the current actor's play state in the refreshed one: temporary HP, death saves, inspiration, NPC hit dice
- * spent, legendary actions, resistances and lair, character resources, favorites, bastion, coins and every spell
- * slot's `value`; the items present in both keep their play state too (`keepDnd5eItemStates`).
+ * spent, legendary actions, resistances and lair, character resources, favorites, bastion and coins; the items
+ * present in both keep their play state too (`keepDnd5eItemStates`). Spell slots follow after the import
+ * (`dnd5eSlotsSpent`, `dnd5eSlotUpdates`), because dnd5e derives their maximum.
  */
 export function keepDnd5eActorState(result, current) {
   result.system = result.system ?? {};
   const currentSystem = current.system ?? {};
   for (const path of keptActorPaths(current)) copyPathFrom(result.system, currentSystem, path);
-  keepSlotValues(result.system, currentSystem);
   keepDnd5eItemStates(result.items ?? [], current.items);
+}
+
+/** The slots spent in play per key of the prepared `system.spells`, for the levels the actor has slots in. */
+export function dnd5eSlotsSpent(preparedSpells) {
+  const spent = {};
+  for (const [slotKey, slot] of Object.entries(preparedSpells ?? {})) {
+    if (hasSlots(slot)) spent[slotKey] = Math.max(slot.max - slot.value, 0);
+  }
+  return spent;
+}
+
+/**
+ * The actor update that spends the slots spent before a refresh again against the refreshed prepared maximum, never
+ * below 0; levels the actor had no slots in keep the exported value. Empty when nothing changes.
+ */
+export function dnd5eSlotUpdates(spentBefore, preparedSpells) {
+  const updates = {};
+  for (const [slotKey, spent] of Object.entries(spentBefore ?? {})) {
+    const slot = preparedSpells?.[slotKey];
+    if (!isFiniteNumber(slot?.max)) continue;
+    const value = Math.max(slot.max - spent, 0);
+    if (value !== slot.value) updates[`system.spells.${slotKey}.value`] = value;
+  }
+  return updates;
 }
 
 /**
@@ -82,10 +106,8 @@ function keptItemPaths(item) {
   return [...KEPT_ITEM_PATHS, ...(KEPT_ITEM_PATHS_BY_TYPE[item.type] ?? [])];
 }
 
-function keepSlotValues(resultSystem, currentSystem) {
-  for (const [slotKey, slot] of Object.entries(currentSystem.spells ?? {})) {
-    if (isFiniteNumber(slot?.value)) setAt(resultSystem, `spells.${slotKey}.value`, slot.value);
-  }
+function hasSlots(slot) {
+  return isFiniteNumber(slot?.max) && slot.max > 0 && isFiniteNumber(slot.value);
 }
 
 function keepMatchedItems(items, currentItems, pathsOf) {

@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  applyDnd5eEffects, isDnd5eData, keepDnd5eActorState, keepDnd5eContainerCurrency, keepDnd5eContentUses,
-  keepDnd5eItemStates
+  applyDnd5eEffects, dnd5eSlotsSpent, dnd5eSlotUpdates, isDnd5eData, keepDnd5eActorState, keepDnd5eContainerCurrency,
+  keepDnd5eContentUses, keepDnd5eItemStates
 } from "../scripts/service/Dnd5ePlayState.mjs";
 
 const DND5E_STATS = { systemId: "dnd5e", systemVersion: "6.0.6" };
@@ -90,11 +90,43 @@ test("an NPC keeps spent legendary actions and resistances and whether it is in 
   assert.deepEqual(result.system.resources.lair, { value: true, initiative: 15, inside: true });
 });
 
-test("every spell slot value and the whole currency come from the current actor", () => {
+test("the whole currency comes from the current actor, the spell slots stay as exported until the import", () => {
   const result = npcIncoming();
   keepDnd5eActorState(result, npcCurrent());
-  assert.deepEqual(result.system.spells, { spell1: { value: 1 }, spell2: { value: 0 }, spell3: { value: 2 }, pact: { value: 1 } });
+  assert.deepEqual(result.system.spells, npcIncoming().system.spells);
   assert.deepEqual(result.system.currency, { gp: 3, sp: 9 });
+});
+
+test("slots spent count only for the levels the actor has slots in", () => {
+  const prepared = {
+    spell1: { value: 1, max: 4 }, spell2: { value: 3, max: 3 }, spell3: { value: 0, max: 0 }, spell4: { value: 5, max: 2 },
+    pact: { value: 1, max: 2 }, spell5: { value: 1 }
+  };
+  assert.deepEqual(dnd5eSlotsSpent(prepared), { spell1: 3, spell2: 0, spell4: 0, pact: 1 });
+  assert.deepEqual(dnd5eSlotsSpent(undefined), {});
+});
+
+test("a slot level the refresh adds keeps the exported value", () => {
+  const spent = dnd5eSlotsSpent({ spell1: { value: 4, max: 4 }, spell3: { value: 0, max: 0 } });
+  assert.deepEqual(dnd5eSlotUpdates(spent, { spell1: { value: 4, max: 4 }, spell3: { value: 2, max: 2 } }), {});
+});
+
+test("a raised maximum adds unspent slots and keeps the spent ones spent", () => {
+  const spent = dnd5eSlotsSpent({ spell2: { value: 1, max: 3 }, spell3: { value: 3, max: 3 } });
+  const updates = dnd5eSlotUpdates(spent, { spell2: { value: 4, max: 4 }, spell3: { value: 4, max: 4 } });
+  assert.deepEqual(updates, { "system.spells.spell2.value": 2 });
+});
+
+test("a lowered maximum caps the remaining slots, never below 0", () => {
+  const spent = dnd5eSlotsSpent({ spell2: { value: 1, max: 3 }, spell3: { value: 3, max: 3 } });
+  const updates = dnd5eSlotUpdates(spent, { spell2: { value: 1, max: 1 }, spell3: { value: 3, max: 1 } });
+  assert.deepEqual(updates, { "system.spells.spell2.value": 0, "system.spells.spell3.value": 1 });
+});
+
+test("the slots spent in Foundry win over the export's remaining value and a removed level is not written", () => {
+  const spent = dnd5eSlotsSpent({ spell1: { value: 2, max: 4 }, pact: { value: 1, max: 2 } });
+  assert.deepEqual(dnd5eSlotUpdates(spent, { spell1: { value: 1, max: 4 } }), { "system.spells.spell1.value": 2 });
+  assert.deepEqual(dnd5eSlotUpdates(spent, undefined), {});
 });
 
 test("favorites and the bastion come from the current actor and are copies", () => {

@@ -10,6 +10,7 @@ const DEFAULT_TOKEN_IMAGE = "icons/svg/mystery-man.svg";
 const SYSTEM_DEFAULT_ICONS = [/^systems\/[^/]+\/icons\/default-icons\//, /^systems\/dnd5e\/icons\/svg\/(actors|items)\//];
 const CONTENTS_SYSTEM_ID = "dnd5e";
 const CONTAINER_TYPE = "container";
+const LOOT_SHEET_TYPE = "loot";
 const IMAGE_EXTENSIONS = {
   "image/png": "png",
   "image/jpeg": "jpg",
@@ -72,9 +73,13 @@ export function appliesPortrait(kind, data) {
   return image === DEFAULT_TOKEN_IMAGE || SYSTEM_DEFAULT_ICONS.some((pattern) => pattern.test(image));
 }
 
-/** Whether importing this document replaces a container's contents: a container Item in a dnd5e world. */
+/**
+ * Whether importing this document replaces a container's contents: a container Item from a loot sheet in a dnd5e
+ * world; a container from an item sheet keeps what it holds.
+ */
 export function holdsContents(kind, data, systemId) {
-  return kind === "Item" && data?.type === CONTAINER_TYPE && systemId === CONTENTS_SYSTEM_ID;
+  if (kind !== "Item" || data?.type !== CONTAINER_TYPE || systemId !== CONTENTS_SYSTEM_ID) return false;
+  return sheetFlag(data)?.type === LOOT_SHEET_TYPE;
 }
 
 /**
