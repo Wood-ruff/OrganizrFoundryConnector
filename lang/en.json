@@ -100,8 +100,10 @@
       "Running": "Building {name} from Organizr: pf2e's compendium is searched and every choice is answered…",
       "Built": "{name} was built from Organizr.",
       "Rebuilt": "{name} was rebuilt from Organizr.",
-      "Findings": "{name} was built with {findings} findings: {missing} not found, {custom} from Organizr sheets, {choices} choices without a hint, {differences} numbers differ. The report is in the chat log.",
-      "RebuiltFindings": "{name} was rebuilt with {findings} findings: {missing} not found, {custom} from Organizr sheets, {choices} choices without a hint, {differences} numbers differ. The report is in the chat log.",
+      "Finding": "{name} was built with 1 finding (not found: {missing}, from Organizr sheets: {custom}, choices without a hint: {choices}, numbers differing: {differences}). The report is in the chat log.",
+      "RebuiltFinding": "{name} was rebuilt with 1 finding (not found: {missing}, from Organizr sheets: {custom}, choices without a hint: {choices}, numbers differing: {differences}). The report is in the chat log.",
+      "Findings": "{name} was built with {findings} findings (not found: {missing}, from Organizr sheets: {custom}, choices without a hint: {choices}, numbers differing: {differences}). The report is in the chat log.",
+      "RebuiltFindings": "{name} was rebuilt with {findings} findings (not found: {missing}, from Organizr sheets: {custom}, choices without a hint: {choices}, numbers differing: {differences}). The report is in the chat log.",
       "UnplacedPreparations": "{name}: {count} prepared copies found no free spell slot.",
       "Errors": {
         "RecipeVersion": "{name}: Organizr sent a build recipe this connector cannot read. Update the Organizr connector module.",

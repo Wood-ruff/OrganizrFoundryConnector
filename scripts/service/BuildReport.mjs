@@ -62,8 +62,14 @@ export function reportToast(report) {
   if (!hasFindings(report)) {
     return { key: report?.updated ? "ORGANIZR.Build.Rebuilt" : "ORGANIZR.Build.Built", data: { name } };
   }
-  const key = report.updated ? "ORGANIZR.Build.RebuiltFindings" : "ORGANIZR.Build.Findings";
-  return { key, data: { name, ...findingCounts(report) } };
+  const counts = findingCounts(report);
+  return { key: findingsKey(report.updated, counts.findings), data: { name, ...counts } };
+}
+
+/** The findings toast's key: built or rebuilt, with one finding or more. */
+function findingsKey(rebuilt, findings) {
+  if (findings === 1) return rebuilt ? "ORGANIZR.Build.RebuiltFinding" : "ORGANIZR.Build.Finding";
+  return rebuilt ? "ORGANIZR.Build.RebuiltFindings" : "ORGANIZR.Build.Findings";
 }
 
 /**

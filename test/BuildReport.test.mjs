@@ -68,12 +68,32 @@ test("a rebuild with findings says rebuilt and counts them the same way", () => 
   assert.deepEqual(reportToast(reportWith(changes, false)), { key: "ORGANIZR.Build.Findings", data: counts });
 });
 
+test("a single finding takes the singular built or rebuilt key", () => {
+  const changes = { differences: [{ key: "ac", organizr: 19, foundry: 22 }] };
+  const counts = { name: "Tessa Quillmoor", missing: 0, custom: 0, choices: 0, differences: 1, findings: 1 };
+  assert.deepEqual(reportToast(reportWith(changes, true)), { key: "ORGANIZR.Build.RebuiltFinding", data: counts });
+  assert.deepEqual(reportToast(reportWith(changes, false)), { key: "ORGANIZR.Build.Finding", data: counts });
+});
+
 test("the built and rebuilt findings texts exist with the same placeholders", () => {
   const texts = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8")).ORGANIZR.Build;
   const placeholders = (text) => text.match(/\{\w+\}/g).sort();
-  assert.match(texts.Findings, /was built/);
-  assert.match(texts.RebuiltFindings, /was rebuilt/);
+  assert.match(texts.Findings, /was built with \{findings\} findings/);
+  assert.match(texts.RebuiltFindings, /was rebuilt with \{findings\} findings/);
+  assert.match(texts.Finding, /was built with 1 finding /);
+  assert.match(texts.RebuiltFinding, /was rebuilt with 1 finding /);
   assert.deepEqual(placeholders(texts.RebuiltFindings), placeholders(texts.Findings));
+  assert.deepEqual(placeholders(texts.RebuiltFinding), placeholders(texts.Finding));
+});
+
+test("the findings texts give each part's count after its label, so a count of 1 reads right", () => {
+  const texts = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8")).ORGANIZR.Build;
+  for (const key of ["Finding", "RebuiltFinding", "Findings", "RebuiltFindings"]) {
+    for (const part of ["missing", "custom", "choices", "differences"]) {
+      assert.match(texts[key], new RegExp(`: \\{${part}\\}[,)]`), `${key} ${part}`);
+    }
+    assert.match(texts[key], /numbers differing: \{differences\}/);
+  }
 });
 
 test("the view lists only non-empty groups in card order with their title keys", () => {
