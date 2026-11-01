@@ -161,7 +161,7 @@
       "key": "a:102",
       "name": "Shield Shove",
       "fileId": 102,
-      "foundryItemId": "goldenShove00001",
+      "foundryItemId": null,
       "document": {
         "name": "Shield Shove",
         "type": "action",
