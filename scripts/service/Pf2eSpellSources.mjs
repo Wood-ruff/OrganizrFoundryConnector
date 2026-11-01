@@ -52,6 +52,23 @@ export function preparedSlots(entry, spellIds) {
   return slotUpdates(slots);
 }
 
+/**
+ * The preparations of a prepared entry that find no slot under the `preparedSlots` rules (`[{key, name, count}]` in recipe
+ * order); spells without an id are skipped, other entry types give none.
+ */
+export function unplacedPreparations(entry, spellIds) {
+  if (entry?.type !== "prepared") return [];
+  const slots = emptyPreparations(entry);
+  const unplaced = [];
+  for (const spell of listOf(entry.spells)) {
+    const id = idOf(spellIds, spell.key);
+    if (!id) continue;
+    const left = prepareSpell(slots, spell, id);
+    if (left > 0) unplaced.push({ key: spell.key, name: spell.name, count: left });
+  }
+  return unplaced;
+}
+
 function createsEntry(entry) {
   return Boolean(entry) && !ENTRYLESS_TYPES.includes(entry.type);
 }
@@ -92,6 +109,7 @@ function prepareSpell(slots, spell, id) {
     if (spell.cantrip) break;
     rank += 1;
   }
+  return remaining;
 }
 
 function fillSlot(slot, id, count) {

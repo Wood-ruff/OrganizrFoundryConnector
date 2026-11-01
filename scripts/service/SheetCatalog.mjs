@@ -1,4 +1,4 @@
-import { isImportable } from "./SheetImport.mjs";
+import { buildsFromRecipe, isImportable } from "./SheetImport.mjs";
 
 const KNOWN_TYPES = ["character", "npc", "item", "spell", "action", "loot", "status"];
 
@@ -71,6 +71,7 @@ function sheetRow(entry) {
     fileId: entry.fileId,
     type: entry.type ?? "other",
     importable: isImportable(entry.type, entry.system),
+    buildsFromRecipe: buildsFromRecipe(entry.type, entry.system),
     name: entry.name ?? "",
     level: entry.level ?? null,
     imageFileId: entry.imageFileId ?? null,

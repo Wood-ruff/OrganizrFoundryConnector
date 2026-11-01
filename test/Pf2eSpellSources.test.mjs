@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { entrySource, preparedSlots, spellLocation } from "../scripts/service/Pf2eSpellSources.mjs";
+import { entrySource, preparedSlots, spellLocation, unplacedPreparations } from "../scripts/service/Pf2eSpellSources.mjs";
 
 const MODULE = "organizr-foundry-connector";
 
@@ -98,4 +98,29 @@ test("spells without a created id and entries that are not prepared give no prep
   assert.deepEqual(preparedSlots(entry, {}), {});
   assert.deepEqual(preparedSlots({ ...entry, type: "spontaneous" }, { "e/s:1": "x" }), {});
   assert.deepEqual(preparedSlots(null, null), {});
+});
+
+test("preparations without room in their rank or any higher one are listed as unplaced", () => {
+  const entry = recipeEntry({
+    slots: { "1": 1, "2": 1 },
+    spells: [spell("e/s:a", { name: "Ash Dart", prepared: 2 }), spell("e/s:b", { name: "Brine Coil", prepared: 2 })]
+  });
+  assert.deepEqual(unplacedPreparations(entry, { "e/s:a": "a1", "e/s:b": "b1" }), [
+    { key: "e/s:b", name: "Brine Coil", count: 2 }
+  ]);
+});
+
+test("cantrips beyond slot0's room are unplaced, spells that all fit are not", () => {
+  const entry = recipeEntry({
+    slots: { "0": 1, "1": 2 },
+    spells: [spell("e/s:c", { name: "Glint", cantrip: true, prepared: 3 }), spell("e/s:d", { name: "Dusk Veil", prepared: 2 })]
+  });
+  assert.deepEqual(unplacedPreparations(entry, { "e/s:c": "c1", "e/s:d": "d1" }), [{ key: "e/s:c", name: "Glint", count: 2 }]);
+});
+
+test("spells without an id and entries that are not prepared have no unplaced preparations", () => {
+  const entry = recipeEntry({ slots: {}, spells: [spell("e/s:1", { prepared: 2 })] });
+  assert.deepEqual(unplacedPreparations(entry, {}), []);
+  assert.deepEqual(unplacedPreparations({ ...entry, type: "innate" }, { "e/s:1": "x" }), []);
+  assert.deepEqual(unplacedPreparations(null, null), []);
 });

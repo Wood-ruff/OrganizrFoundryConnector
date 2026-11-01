@@ -1,11 +1,13 @@
 import { batchPlan, filterSheets, groupSheets, importableSheets, listErrorKey } from "../service/SheetCatalog.mjs";
 import { needsBatchConfirm } from "../service/RefreshPrompt.mjs";
-import { importErrorKey } from "../service/SheetImport.mjs";
+import { buildsFromRecipe, importErrorKey } from "../service/SheetImport.mjs";
 import { createImageCache } from "../service/ImageCache.mjs";
 import { readWorldLink } from "../config/ModuleSettings.mjs";
 import { worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { importSheet, linkedWorldDocuments } from "./SheetImport.mjs";
+import { importCharacterBuild } from "./CharacterBuild.mjs";
+import { notifyBuild, postBuildReport } from "./BuildReport.mjs";
 import { confirmBatch, confirmRefresh } from "./RefreshConfirm.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -117,16 +119,15 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  async #import(fileId, options) {
+  async #import(fileId, builds, options) {
     this.#importing.add(fileId);
     this.render({ parts: ["list"] });
     try {
-      const outcome = await importSheet(fileId, options);
-      const key = outcome.updated ? "ORGANIZR.Browser.Updated" : "ORGANIZR.Browser.Imported";
-      ui.notifications.info(key, { localize: true, format: { name: outcome.name } });
+      const outcome = await importOrBuild(fileId, builds, options);
+      this.#announce(outcome);
       this.#warnAll(outcome);
     } catch (error) {
-      ui.notifications.error(importErrorKey(error.status ?? -1), { localize: true, format: { message: error.message } });
+      this.#showImportError(error);
     } finally {
       this.#importing.delete(fileId);
       this.render({ parts: ["list"] });
@@ -153,9 +154,11 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   async #importOneOfMany(sheet, restoreInventory, tally) {
     const fileId = String(sheet.fileId);
     try {
-      const outcome = await importSheet(fileId, { recordedUuid: sheet.uuid ?? null, restoreInventory });
+      const options = { recordedUuid: sheet.uuid ?? null, restoreInventory };
+      const outcome = await importOrBuild(fileId, sheet.buildsFromRecipe, options);
       if (outcome.updated) tally.updated += 1;
       else tally.imported += 1;
+      if (outcome.build) await announceBuild(outcome.build);
       this.#warnAll(outcome);
     } catch (error) {
       tally.failed += 1;
@@ -165,6 +168,25 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#importing.delete(fileId);
       this.render({ parts: ["list"] });
     }
+  }
+
+  /** The success toast: a built character's report (toast plus findings card), else imported or updated. */
+  #announce(outcome) {
+    if (outcome.build) {
+      announceBuild(outcome.build);
+      return;
+    }
+    const key = outcome.updated ? "ORGANIZR.Browser.Updated" : "ORGANIZR.Browser.Imported";
+    ui.notifications.info(key, { localize: true, format: { name: outcome.name } });
+  }
+
+  /** A build error carries its own localized text; other failures are named by their HTTP status. */
+  #showImportError(error) {
+    if (error.buildKey) {
+      ui.notifications.error(error.message);
+      return;
+    }
+    ui.notifications.error(importErrorKey(error.status ?? -1), { localize: true, format: { message: error.message } });
   }
 
   #warnAll(outcome) {
@@ -252,7 +274,8 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!answer) return;
       restoreInventory = answer.restoreInventory;
     }
-    this.#import(fileId, { recordedUuid: entry?.uuid ?? null, restoreInventory });
+    const builds = buildsFromRecipe(entry?.type, entry?.system);
+    this.#import(fileId, builds, { recordedUuid: entry?.uuid ?? null, restoreInventory });
   }
 
   static async #onImportSection(event, target) {
@@ -272,5 +295,21 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       if (restoreInventory) plan = batchPlan(sheets, linked, true);
     }
     this.#importMany(plan, restoreInventory);
+  }
+}
+
+/** Builds a pf2e character from its recipe, imports every other sheet as a Foundry document. */
+function importOrBuild(fileId, builds, options) {
+  if (builds) return importCharacterBuild(fileId, options);
+  return importSheet(fileId, options);
+}
+
+/** The build toast, and the report card in the chat log when the build has findings (a card failure is logged only). */
+async function announceBuild(report) {
+  notifyBuild(report);
+  try {
+    await postBuildReport(report);
+  } catch (error) {
+    console.warn("Organizr connector: build report card not posted", error);
   }
 }

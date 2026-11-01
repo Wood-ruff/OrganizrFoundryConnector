@@ -96,6 +96,63 @@
         "UnknownType": "This world's system has no document type \"{type}\"."
       }
     },
+    "Build": {
+      "Running": "Building {name} from Organizr: pf2e's compendium is searched and every choice is answered…",
+      "Built": "{name} was built from Organizr.",
+      "Rebuilt": "{name} was rebuilt from Organizr.",
+      "Findings": "{name} was built with {findings} findings: {missing} not found, {custom} from Organizr sheets, {choices} choices without a hint, {differences} numbers differ. The report is in the chat log.",
+      "RefreshUnavailable": "nothing was changed: rebuilding a character that is already in this world needs a later connector version",
+      "UnplacedPreparations": "{name}: {count} prepared copies found no free spell slot.",
+      "Errors": {
+        "RecipeVersion": "{name}: Organizr sent a build recipe this connector cannot read. Update the Organizr connector module.",
+        "NoClass": "{name}: pf2e's compendium has no single class named \"{className}\", so no actor was created.",
+        "Failed": "{name}: the build failed, so the new actor was removed ({message}).",
+        "RefreshFailed": "{name} was not fully rebuilt ({message}). What was rebuilt stays; import it again to refresh it."
+      },
+      "Card": {
+        "Title": "Organizr build of {name}",
+        "Missing": "Not found in pf2e's compendium and no Organizr sheet ({count})",
+        "Ambiguous": "Several compendium matches, left out ({count})",
+        "Custom": "Built from Organizr sheets ({count})",
+        "Unslotted": "Placed outside a feat slot ({count})",
+        "Attached": "Created loose instead of inside their item ({count})",
+        "Defaulted": "First choice taken for lack of a hint ({count})",
+        "Unanswered": "Choices left open ({count})",
+        "Manual": "Attributes set by hand: {reason}",
+        "ManualReasons": {
+          "unreachable": "no boost choice reaches Organizr's attributes",
+          "gradual": "the gradual boost variant is on"
+        },
+        "UnspentBoosts": "{count} attribute boosts left unspent",
+        "Differences": "Numbers that differ, Foundry / Organizr ({count})",
+        "Notes": "Notes ({count})",
+        "MatchCount": "{name} ({count} matches)"
+      },
+      "Lists": {
+        "identity": "Identity",
+        "features": "Feat",
+        "actions": "Action",
+        "spells": "Spell",
+        "inventory": "Item",
+        "lores": "Lore",
+        "languages": "Language",
+        "coins": "Coins"
+      },
+      "Totals": {
+        "level": "Level",
+        "hp": "HP",
+        "ac": "AC",
+        "perception": "Perception",
+        "classDc": "Class DC",
+        "speed": "Speed",
+        "focusMax": "Focus Points",
+        "abilities": { "str": "Str", "dex": "Dex", "con": "Con", "int": "Int", "wis": "Wis", "cha": "Cha" },
+        "saves": { "fortitude": "Fortitude", "reflex": "Reflex", "will": "Will" },
+        "SpellDc": "{name} DC",
+        "SpellAttack": "{name} spell attack",
+        "StrikeAttack": "{name} attack"
+      }
+    },
     "Refresh": {
       "Title": "Refresh \"{name}\" from Organizr?",
       "ActorBody": "Replaces stats, strikes, abilities and spells. Keeps the token (image, name, disposition), current HP (in pf1 the damage, nonlethal and temporary HP), spent focus points, spell slots, pf1 item uses and prepared casts, conditions, effects and buffs.",

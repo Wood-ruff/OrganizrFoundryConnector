@@ -31,7 +31,7 @@ test("groupSheets nests projects then types in server order with counts and row 
   assert.deepEqual(projects[0].types.map((t) => t.type), ["npc", "spell"]);
   assert.equal(projects[0].types[0].labelKey, "ORGANIZR.Browser.Types.npc");
   assert.deepEqual(projects[0].types[0].sheets[0], {
-    fileId: 1, type: "npc", importable: true, name: "Goblin Warrior", level: "1", imageFileId: 5,
+    fileId: 1, type: "npc", importable: true, buildsFromRecipe: false, name: "Goblin Warrior", level: "1", imageFileId: 5,
     tags: ["goblin", "humanoid"], uuid: null, worldActorId: null, updatedAt: "2026-10-01T00:00:00Z"
   });
   assert.equal(projects[1].types[0].sheets[0].worldActorId, "Ab12Cd34Ef56Gh78");
@@ -62,6 +62,16 @@ test("a character row is importable only when its sheet names a supported system
   assert.equal(project.importableCount, 3);
   assert.deepEqual(importableFileIds([project], 1, "character"), [11, 12]);
   assert.equal("system" in project.types[0].sheets[0], false);
+});
+
+test("only a pf2e character row is built from its recipe", () => {
+  const sheets = [
+    { fileId: 21, projectId: 1, type: "character", name: "Ilva Test", system: "pf1e" },
+    { fileId: 22, projectId: 1, type: "character", name: "Doran Test", system: "pf2e" },
+    { fileId: 23, projectId: 1, type: "npc", name: "Bandit Test", system: "pf2e" }
+  ];
+  const rows = groupSheets(sheets)[0].types.flatMap((type) => type.sheets);
+  assert.deepEqual(rows.map((row) => [row.fileId, row.buildsFromRecipe]), [[21, false], [22, true], [23, false]]);
 });
 
 test("unknown types get no label key and missing fields default safely", () => {

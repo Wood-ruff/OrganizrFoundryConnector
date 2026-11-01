@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { emptyReport, hasFindings, reportToast, reportView } from "../scripts/service/BuildReport.mjs";
+import { emptyReport, filledReport, hasFindings, reportToast, reportView } from "../scripts/service/BuildReport.mjs";
 
 function reportWith(changes, updated = false) {
   return { ...emptyReport("Tessa Quillmoor", updated), ...changes };
@@ -113,4 +113,45 @@ test("the view lists only non-empty groups in card order with their title keys",
 
 test("a report without findings has no view groups", () => {
   assert.deepEqual(reportView(emptyReport("Tessa Quillmoor", true)).groups, []);
+});
+
+test("a filled report takes every part, unknown languages as missing and the prompts' choices", () => {
+  const report = filledReport("Tessa Quillmoor", false, {
+    findings: {
+      missing: [{ list: "features", name: "Lost Talent" }],
+      ambiguous: [{ list: "features", name: "Twin Echo", count: 2 }],
+      custom: [{ list: "inventory", name: "Cinder Blade" }]
+    },
+    unknownLanguages: ["Old Tidecant"],
+    unslotted: ["Bonus Knack"],
+    attached: ["Brass Lantern"],
+    prompts: [
+      { item: "Weapon Drill", choice: "Axe", how: "default" },
+      { item: "Scholar", choice: "Occultism", how: "suffix" },
+      { item: "Hidden Talent", choice: null, how: null }
+    ],
+    itemSources: [{ name: "Quiet Gift", system: { rules: [{ key: "ChoiceSet", ignored: true }] } }],
+    manualAttributes: "unreachable",
+    unspentBoosts: 2,
+    differences: [{ key: "ac", organizr: 19, foundry: 22 }],
+    notes: ["2 hidden entries were left out."]
+  });
+  assert.deepEqual(report.missing, [{ list: "features", name: "Lost Talent" }, { list: "languages", name: "Old Tidecant" }]);
+  assert.deepEqual(report.ambiguous, [{ list: "features", name: "Twin Echo", count: 2 }]);
+  assert.deepEqual(report.custom, [{ list: "inventory", name: "Cinder Blade" }]);
+  assert.deepEqual(report.unslotted, ["Bonus Knack"]);
+  assert.deepEqual(report.attached, ["Brass Lantern"]);
+  assert.deepEqual(report.defaulted, [{ item: "Weapon Drill", choice: "Axe" }]);
+  assert.deepEqual(report.unanswered, [{ item: "Hidden Talent" }, { item: "Quiet Gift" }]);
+  assert.equal(report.manualAttributes, "unreachable");
+  assert.equal(report.unspentBoosts, 2);
+  assert.deepEqual(report.differences, [{ key: "ac", organizr: 19, foundry: 22 }]);
+  assert.deepEqual(report.notes, ["2 hidden entries were left out."]);
+  assert.equal(report.updated, false);
+});
+
+test("a filled report without parts is empty and has no findings", () => {
+  const report = filledReport("Tessa Quillmoor", true, {});
+  assert.deepEqual(report, emptyReport("Tessa Quillmoor", true));
+  assert.equal(hasFindings(filledReport("Tessa Quillmoor", false, { unspentBoosts: -1 })), false);
 });

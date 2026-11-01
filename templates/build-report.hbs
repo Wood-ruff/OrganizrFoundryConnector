@@ -1,0 +1,15 @@
+<div class="organizr-build-report">
+  <h3 class="organizr-build-title">{{title}}</h3>
+  {{#each groups}}
+  <section class="organizr-build-group">
+    <h4>{{title}}</h4>
+    {{#if rows.length}}
+    <ul>
+      {{#each rows}}
+      <li>{{#if label}}<span class="organizr-build-label">{{label}}</span> {{/if}}{{text}}</li>
+      {{/each}}
+    </ul>
+    {{/if}}
+  </section>
+  {{/each}}
+</div>

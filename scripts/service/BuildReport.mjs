@@ -1,3 +1,5 @@
+import { unansweredChoices } from "./ChoiceAnswers.mjs";
+
 const LIST_FINDINGS = [
   "missing", "ambiguous", "custom", "unslotted", "attached", "defaulted", "unanswered", "differences", "notes"
 ];
@@ -20,6 +22,28 @@ export function emptyReport(name, updated) {
     differences: [],
     notes: []
   };
+}
+
+/**
+ * The report of a finished build from its parts: the matching findings (`{missing, ambiguous, custom}`), unknown
+ * languages (missing), unslotted and attached names, the prompts' defaulted choices, unanswered choices of the prompts
+ * and the created item sources, the attribute mode, unspent boosts, totals differences and notes.
+ */
+export function filledReport(name, updated, parts) {
+  const report = emptyReport(name, updated);
+  const languages = listOf(parts?.unknownLanguages).map((language) => ({ list: "languages", name: language }));
+  report.missing = [...listOf(parts?.findings?.missing), ...languages];
+  report.ambiguous = [...listOf(parts?.findings?.ambiguous)];
+  report.custom = [...listOf(parts?.findings?.custom)];
+  report.unslotted = [...listOf(parts?.unslotted)];
+  report.attached = [...listOf(parts?.attached)];
+  report.defaulted = defaultedChoices(parts?.prompts);
+  report.unanswered = unansweredChoices(parts?.prompts, parts?.itemSources);
+  report.manualAttributes = parts?.manualAttributes ?? null;
+  report.unspentBoosts = parts?.unspentBoosts > 0 ? parts.unspentBoosts : 0;
+  report.differences = [...listOf(parts?.differences)];
+  report.notes = [...listOf(parts?.notes)];
+  return report;
 }
 
 /** Whether the report has anything to show: a non-empty list, manual attributes or unspent boosts. */
@@ -107,4 +131,16 @@ function titleKey(id) {
 
 function lengthOf(list) {
   return Array.isArray(list) ? list.length : 0;
+}
+
+/** The prompts answered with the first choice for lack of evidence, as `{item, choice}`. */
+function defaultedChoices(prompts) {
+  return listOf(prompts).filter((prompt) => prompt?.how === "default").map((prompt) => ({
+    item: prompt.item,
+    choice: prompt.choice
+  }));
+}
+
+function listOf(value) {
+  return Array.isArray(value) ? value : [];
 }
