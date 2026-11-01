@@ -154,11 +154,36 @@ test("a pf1 character's push body carries the totals pf1 prepared", () => {
   assert.equal(body.uuid, "Actor.A1");
 });
 
-test("a pf2e character and a pf1 character without numeric totals push without derivedTotals", () => {
+test("a pf1 character in another world and characters without numeric totals push without derivedTotals", () => {
   const system = JSON.parse(readFileSync(new URL("fixtures/pf1-character-system.json", import.meta.url), "utf8"));
   assert.equal("derivedTotals" in syncBody(pf1Character(system), world), false);
   assert.equal("derivedTotals" in syncBody(pf1Character({ attributes: {} }), pf1World), false);
-  assert.equal("derivedTotals" in syncBody(actor([], []), world), false);
+  assert.equal("derivedTotals" in syncBody({ ...actor([], []), type: "character" }, world), false);
+});
+
+function pf2eCharacter() {
+  return {
+    ...actor([], []),
+    type: "character",
+    level: 3,
+    hitPoints: { value: 20, max: 41 },
+    armorClass: { value: 19 },
+    perception: { mod: 8 },
+    saves: { fortitude: { mod: 9 }, reflex: { mod: 6 }, will: { mod: 7 } },
+    skills: { athletics: { mod: 9 }, "invented-lore": { mod: 5, lore: true } },
+    system: { actions: [{ type: "strike", label: "Invented Blade", totalModifier: 10 }] }
+  };
+}
+
+test("a pf2e character's push body carries the totals pf2e prepared", () => {
+  const body = syncBody(pf2eCharacter(), world);
+
+  assert.equal(body.derivedTotals.hp, 41);
+  assert.equal(body.derivedTotals.ac, 19);
+  assert.equal(body.derivedTotals.perception, 8);
+  assert.deepEqual(body.derivedTotals.saves, { fortitude: 9, reflex: 6, will: 7 });
+  assert.deepEqual(body.derivedTotals.lores, { "invented-lore": 5 });
+  assert.deepEqual(body.derivedTotals.strikes, { "Invented Blade": { attack: 10 } });
 });
 
 const dnd5eWorld = { id: "w2", coreVersion: "14.369", systemId: "dnd5e", systemVersion: "6.0.6" };

@@ -57,10 +57,22 @@ export function isStatusDocument(documentName, type) {
   return documentName === "Item" && STATUS_ITEM_TYPES.includes(type);
 }
 
-/** The combatant whose actor is `actor` (by uuid), or null. */
-export function combatantOfActor(combatants, actor) {
-  if (!actor?.uuid) return null;
-  return [...(combatants ?? [])].find((combatant) => combatant.actor?.uuid === actor.uuid) ?? null;
+/**
+ * The combatants a change of `actor` shows on: the one whose actor it is (by uuid) and, for a base actor, every
+ * combatant of an unlinked token made from it (their synthetic actors follow the base and fire no hooks of their own).
+ */
+export function combatantsOfActor(combatants, actor) {
+  if (!actor?.uuid) return [];
+  return [...(combatants ?? [])].filter((combatant) => showsChangeOf(combatant, actor));
+}
+
+function showsChangeOf(combatant, actor) {
+  if (combatant.actor?.uuid === actor.uuid) return true;
+  return !actor.isToken && isUnlinkedTokenOf(combatant.token, actor);
+}
+
+function isUnlinkedTokenOf(token, actor) {
+  return Boolean(token) && !token.actorLink && token.actorId === actor.id;
 }
 
 /** Localization key for a failed combat push, by HTTP status (0 = no response). */

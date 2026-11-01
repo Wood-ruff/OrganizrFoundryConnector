@@ -6,8 +6,8 @@ import { derivedTotalsFor } from "./DerivedTotals.mjs";
 
 /**
  * The request body for the Organizr character endpoint: the export plus the Foundry uuids and,
- * when the actor is already known to Organizr, the file it belongs to; a pf1 or dnd5e character also carries the totals
- * its system prepared (`derivedTotals`, dnd5e under the given rules version). With a localizer, custom resistance
+ * when the actor is already known to Organizr, the file it belongs to; a pf1, pf2e or dnd5e character also carries the
+ * totals its system prepared (`derivedTotals`, dnd5e under the given rules version). With a localizer, custom resistance
  * labels that are pf2e lang keys are sent as their localized text.
  */
 export function syncBody(actor, world, localize = null, rulesVersion = "") {

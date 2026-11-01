@@ -11,7 +11,7 @@ function actorOf(type, system) {
   return { documentName: "Actor", type, system };
 }
 
-test("totals are sent for NPC and character actors in a pf1 or dnd5e world only", () => {
+test("totals are sent for NPC and character actors in a pf1 or dnd5e world", () => {
   for (const systemId of ["pf1", "dnd5e"]) {
     assert.equal(sendsDerivedTotals(systemId, "Actor", "npc"), true, systemId);
     assert.equal(sendsDerivedTotals(systemId, "Actor", "character"), true, systemId);
@@ -20,9 +20,31 @@ test("totals are sent for NPC and character actors in a pf1 or dnd5e world only"
   assert.equal(sendsDerivedTotals("pf1", "Actor", "basic"), false);
   assert.equal(sendsDerivedTotals("dnd5e", "Actor", "vehicle"), false);
   assert.equal(sendsDerivedTotals("dnd5e", "Actor", "group"), false);
-  assert.equal(sendsDerivedTotals("pf2e", "Actor", "character"), false);
-  assert.equal(sendsDerivedTotals("pf2e", "Actor", "npc"), false);
   assert.equal(sendsDerivedTotals(undefined, "Actor", "npc"), false);
+});
+
+test("a pf2e world sends totals for character actors only", () => {
+  assert.equal(sendsDerivedTotals("pf2e", "Actor", "character"), true);
+  assert.equal(sendsDerivedTotals("pf2e", "Actor", "npc"), false);
+  assert.equal(sendsDerivedTotals("pf2e", "Actor", "loot"), false);
+  assert.equal(sendsDerivedTotals("pf2e", "Item", "character"), false);
+});
+
+test("derivedTotalsFor reads a pf2e character's totals from the prepared actor itself", () => {
+  const character = {
+    documentName: "Actor", type: "character", level: 2,
+    hitPoints: { max: 30 }, armorClass: { value: 17 }, perception: { mod: 6 },
+    saves: { fortitude: { mod: 7 }, reflex: { mod: 5 }, will: { mod: 4 } },
+    system: {}
+  };
+
+  const totals = derivedTotalsFor("pf2e", character);
+
+  assert.equal(totals.hp, 30);
+  assert.equal(totals.ac, 17);
+  assert.deepEqual(totals.saves, { fortitude: 7, reflex: 5, will: 4 });
+  assert.equal(derivedTotalsFor("pf2e", { ...character, type: "npc" }), null);
+  assert.equal(derivedTotalsFor("pf2e", { ...character, hitPoints: null }), null);
 });
 
 test("derivedTotalsFor gives a pf1 character's or NPC's totals and null for anything else", () => {

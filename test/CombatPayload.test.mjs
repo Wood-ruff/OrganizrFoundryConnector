@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { combatErrorKey, combatEvent, combatPayload, combatantOfActor, combatantState, isStatusDocument, moveActionOf } from "../scripts/service/CombatPayload.mjs";
+import { combatErrorKey, combatEvent, combatPayload, combatantState, combatantsOfActor, isStatusDocument, moveActionOf } from "../scripts/service/CombatPayload.mjs";
 
 const world = { id: "w", title: "World", coreVersion: "14.369", systemId: "pf2e", systemVersion: "8.6.0" };
 
@@ -217,12 +217,46 @@ test("status documents are active effects, pf2e condition/effect items and pf1 b
   assert.equal(isStatusDocument("Actor", "npc"), false);
 });
 
-test("combatantOfActor finds the combatant by actor uuid", () => {
-  const combatants = [{ id: "c0", actor: { uuid: "Actor.A1" } }, { id: "c1", actor: { uuid: "Scene.S.Token.t1.Actor.A1" } }, { id: "c2", actor: null }];
-  assert.equal(combatantOfActor(combatants, { uuid: "Scene.S.Token.t1.Actor.A1" }).id, "c1");
-  assert.equal(combatantOfActor(combatants, { uuid: "Actor.Zz" }), null);
-  assert.equal(combatantOfActor(combatants, null), null);
-  assert.equal(combatantOfActor(new Set(combatants), { uuid: "Actor.A1" }).id, "c0");
+function unlinkedCombatant(id, tokenId, baseId) {
+  return {
+    id,
+    actor: { id: baseId, uuid: `Scene.S.Token.${tokenId}.Actor.${baseId}`, isToken: true },
+    token: { id: tokenId, actorId: baseId, actorLink: false }
+  };
+}
+
+function combatantIds(combatants) {
+  return combatants.map((combatant) => combatant.id);
+}
+
+const mixedCombatants = [
+  { id: "c0", actor: { id: "A1", uuid: "Actor.A1", isToken: false }, token: { id: "t0", actorId: "A1", actorLink: true } },
+  unlinkedCombatant("c1", "t1", "B1"),
+  unlinkedCombatant("c2", "t2", "B1"),
+  unlinkedCombatant("c3", "t3", "B2"),
+  { id: "c4", actor: null, token: null }
+];
+
+test("combatantsOfActor finds a linked actor's combatant by uuid", () => {
+  assert.deepEqual(combatantIds(combatantsOfActor(mixedCombatants, { id: "A1", uuid: "Actor.A1", isToken: false })), ["c0"]);
+  assert.deepEqual(combatantIds(combatantsOfActor(new Set(mixedCombatants), { id: "A1", uuid: "Actor.A1" })), ["c0"]);
+});
+
+test("a base actor's change reaches every unlinked combatant made from it", () => {
+  const base = { id: "B1", uuid: "Actor.B1", isToken: false };
+  assert.deepEqual(combatantIds(combatantsOfActor(mixedCombatants, base)), ["c1", "c2"]);
+});
+
+test("a token actor's change reaches only its own combatant", () => {
+  const tokenActor = { id: "B1", uuid: "Scene.S.Token.t2.Actor.B1", isToken: true };
+  assert.deepEqual(combatantIds(combatantsOfActor(mixedCombatants, tokenActor)), ["c2"]);
+});
+
+test("combatantsOfActor finds nothing for another base actor, a missing uuid or no combatants", () => {
+  assert.deepEqual(combatantsOfActor(mixedCombatants, { id: "B9", uuid: "Actor.B9", isToken: false }), []);
+  assert.deepEqual(combatantsOfActor(mixedCombatants, { id: "B1", isToken: false }), []);
+  assert.deepEqual(combatantsOfActor(mixedCombatants, null), []);
+  assert.deepEqual(combatantsOfActor(undefined, { id: "B1", uuid: "Actor.B1" }), []);
 });
 
 function pf1Character() {

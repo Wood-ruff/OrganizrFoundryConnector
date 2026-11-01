@@ -1,6 +1,6 @@
 import { OrganizrSidebarTab } from "./entry/OrganizrSidebarTab.mjs";
 import { isActiveGM, isSyncedCombat, queueState, sendCombat, sendEnd, sendMove } from "./entry/CombatSync.mjs";
-import { combatEvent, combatantOfActor, isStatusDocument } from "./service/CombatPayload.mjs";
+import { combatEvent, combatantsOfActor, isStatusDocument } from "./service/CombatPayload.mjs";
 import { isWorldLinked } from "./service/WorldLink.mjs";
 import { pullCommands } from "./entry/CombatCommandPull.mjs";
 import { registerSendControls } from "./entry/DocumentSend.mjs";
@@ -93,8 +93,7 @@ function onActorStateChange(actor, changed = null) {
   if (changed && !isStatusDocument(changed.documentName, changed.type)) return;
   const combat = game.combat;
   if (!actor || !shouldFollow(combat)) return;
-  const combatant = combatantOfActor(combat.combatants, actor);
-  if (combatant) queueState(combat, combatant);
+  for (const combatant of combatantsOfActor(combat.combatants, actor)) queueState(combat, combatant);
 }
 
 function touchesCharacterList(changes) {

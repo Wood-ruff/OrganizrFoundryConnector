@@ -1,0 +1,32 @@
+{
+  "level": 5,
+  "hp": 78,
+  "ac": 22,
+  "perception": 11,
+  "speed": 30,
+  "classDc": 21,
+  "focusMax": 0,
+  "abilities": { "str": 4, "dex": 3, "con": 3, "int": 0, "wis": 2, "cha": 0 },
+  "saves": { "fortitude": 12, "reflex": 12, "will": 11 },
+  "skills": {
+    "acrobatics": 10,
+    "arcana": 0,
+    "athletics": 13,
+    "crafting": 0,
+    "deception": 0,
+    "diplomacy": 0,
+    "intimidation": 7,
+    "medicine": 2,
+    "nature": 2,
+    "occultism": 0,
+    "performance": 0,
+    "religion": 2,
+    "society": 0,
+    "stealth": 3,
+    "survival": 9,
+    "thievery": 3
+  },
+  "lores": { "warfare-lore": 7 },
+  "spellcasting": { "Arcane Prepared Spells": { "dc": 21, "attack": 11 } },
+  "strikes": { "+1 Longsword": { "attack": 16 } }
+}
