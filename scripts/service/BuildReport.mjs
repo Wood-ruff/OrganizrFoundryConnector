@@ -54,15 +54,16 @@ export function hasFindings(report) {
 }
 
 /**
- * The toast after a build: built or rebuilt without findings, else the findings with their counts (`missing` covers
- * ambiguous entries, `choices` defaulted and unanswered ones, `findings` everything).
+ * The toast after a build: built or rebuilt without findings, else built or rebuilt with the findings' counts
+ * (`missing` covers ambiguous entries, `choices` defaulted and unanswered ones, `findings` everything).
  */
 export function reportToast(report) {
   const name = report?.name ?? "";
   if (!hasFindings(report)) {
     return { key: report?.updated ? "ORGANIZR.Build.Rebuilt" : "ORGANIZR.Build.Built", data: { name } };
   }
-  return { key: "ORGANIZR.Build.Findings", data: { name, ...findingCounts(report) } };
+  const key = report.updated ? "ORGANIZR.Build.RebuiltFindings" : "ORGANIZR.Build.Findings";
+  return { key, data: { name, ...findingCounts(report) } };
 }
 
 /**

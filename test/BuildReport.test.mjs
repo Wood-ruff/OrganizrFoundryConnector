@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { emptyReport, filledReport, hasFindings, reportToast, reportView } from "../scripts/service/BuildReport.mjs";
 
 function reportWith(changes, updated = false) {
@@ -53,11 +54,26 @@ test("with findings the toast counts them", () => {
     differences: [{ key: "ac", organizr: 19, foundry: 22 }],
     manualAttributes: "unreachable",
     unspentBoosts: 4
-  }, true);
+  }, false);
   assert.deepEqual(reportToast(report), {
     key: "ORGANIZR.Build.Findings",
     data: { name: "Tessa Quillmoor", missing: 2, custom: 1, choices: 2, differences: 1, findings: 9 }
   });
+});
+
+test("a rebuild with findings says rebuilt and counts them the same way", () => {
+  const changes = { custom: [{ list: "inventory", name: "Cinder Blade" }], differences: [{ key: "ac", organizr: 19, foundry: 22 }] };
+  const counts = { name: "Tessa Quillmoor", missing: 0, custom: 1, choices: 0, differences: 1, findings: 2 };
+  assert.deepEqual(reportToast(reportWith(changes, true)), { key: "ORGANIZR.Build.RebuiltFindings", data: counts });
+  assert.deepEqual(reportToast(reportWith(changes, false)), { key: "ORGANIZR.Build.Findings", data: counts });
+});
+
+test("the built and rebuilt findings texts exist with the same placeholders", () => {
+  const texts = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8")).ORGANIZR.Build;
+  const placeholders = (text) => text.match(/\{\w+\}/g).sort();
+  assert.match(texts.Findings, /was built/);
+  assert.match(texts.RebuiltFindings, /was rebuilt/);
+  assert.deepEqual(placeholders(texts.RebuiltFindings), placeholders(texts.Findings));
 });
 
 test("the view lists only non-empty groups in card order with their title keys", () => {

@@ -1,5 +1,5 @@
 import { batchPlan, filterSheets, groupSheets, importableSheets, listErrorKey } from "../service/SheetCatalog.mjs";
-import { needsBatchConfirm } from "../service/RefreshPrompt.mjs";
+import { batchImportOptions, batchRestore, needsBatchConfirm } from "../service/RefreshPrompt.mjs";
 import { buildsFromRecipe, importErrorKey } from "../service/SheetImport.mjs";
 import { createImageCache } from "../service/ImageCache.mjs";
 import { readWorldLink } from "../config/ModuleSettings.mjs";
@@ -134,7 +134,7 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  async #importMany(plan, restoreInventory) {
+  async #importMany(plan, restore) {
     const sheets = [...plan.create, ...plan.refresh];
     const skipped = plan.skippedLoot.length;
     const tally = { total: sheets.length + skipped, imported: 0, updated: 0, skipped, failed: 0 };
@@ -142,7 +142,7 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const sheet of sheets) this.#importing.add(String(sheet.fileId));
     this.render({ parts: ["list"] });
     try {
-      for (const sheet of sheets) await this.#importOneOfMany(sheet, restoreInventory, tally);
+      for (const sheet of sheets) await this.#importOneOfMany(sheet, restore, tally);
     } finally {
       for (const sheet of sheets) this.#importing.delete(String(sheet.fileId));
       this.#batchRunning = false;
@@ -151,11 +151,10 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     ui.notifications.info("ORGANIZR.Browser.BatchDone", { localize: true, format: tally });
   }
 
-  async #importOneOfMany(sheet, restoreInventory, tally) {
+  async #importOneOfMany(sheet, restore, tally) {
     const fileId = String(sheet.fileId);
     try {
-      const options = { recordedUuid: sheet.uuid ?? null, restoreInventory };
-      const outcome = await importOrBuild(fileId, sheet.buildsFromRecipe, options);
+      const outcome = await importOrBuild(fileId, sheet.buildsFromRecipe, batchImportOptions(sheet, restore));
       if (outcome.updated) tally.updated += 1;
       else tally.imported += 1;
       if (outcome.build) await announceBuild(outcome.build);
@@ -287,14 +286,14 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     const linked = linkedWorldDocuments();
     const systemId = worldInfo().systemId;
     let plan = batchPlan(sheets, linked, false);
-    let restoreInventory = false;
+    let restore = batchRestore(null, plan);
     if (needsBatchConfirm(plan)) {
       const answer = await this.#askFirst(() => confirmBatch(plan, systemId));
       if (!answer) return;
-      restoreInventory = answer.restoreInventory && plan.skippedLoot.length > 0;
-      if (restoreInventory) plan = batchPlan(sheets, linked, true);
+      restore = batchRestore(answer, plan);
+      if (restore.inventory) plan = batchPlan(sheets, linked, true);
     }
-    this.#importMany(plan, restoreInventory);
+    this.#importMany(plan, restore);
   }
 }
 

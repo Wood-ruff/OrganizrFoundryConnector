@@ -11,19 +11,24 @@ import {
 /**
  * Writes a planned build's items onto the actor in pf2e's order: ancestry, heritage, background, class and deity, the
  * features one at a time into free feat slots, actions, lores, spellcasting and gear with coins. Choice prompts are
- * answered by the caller. Returns `{unslotted, attached, unplaced}` for the report.
+ * answered by the caller. A rebuild's `plan.keptId(key)` gives a root its previous `_id`. Fills and returns `written`
+ * (`{unslotted, attached, unplaced}`) for the report; a caller passing its own sees what was written before a failure.
  */
-export async function writeBuildItems(actor, recipe, plan, evidence) {
+export async function writeBuildItems(actor, recipe, plan, evidence, written = emptyWritten()) {
   const sluggify = game.pf2e.system.sluggify;
-  const written = { unslotted: [], attached: [], unplaced: [] };
-  await createItems(actor, abcSources(plan.identity, { boosts: plan.boosts }, recipe.keyAttribute));
+  await createItems(actor, abcSources(plan.identity, { boosts: plan.boosts }, recipe.keyAttribute), plan);
   markItemsCovered(evidence, actor, sluggify);
   await writeFeatures(actor, recipe, plan, { evidence, sluggify, written });
   await writeActions(actor, recipe, plan, { evidence, sluggify });
-  await writeLores(actor, recipe, sluggify);
+  await writeLores(actor, recipe, plan, sluggify);
   await writeSpellcasting(actor, recipe, plan, { sluggify, written });
   await writeGear(actor, recipe, plan, written);
   return written;
+}
+
+/** The report lists `writeBuildItems` fills. */
+export function emptyWritten() {
+  return { unslotted: [], attached: [], unplaced: [] };
 }
 
 /** Each uncovered feature in build order, into the free slot of its category; one create each, so grants land first. */
@@ -33,21 +38,21 @@ async function writeFeatures(actor, recipe, plan, { evidence, sluggify, written 
     if (!source || isCovered(feature, actor.items, sluggify)) continue;
     const slot = slotFor(feature, freeFeatSlots([...actor.feats], actor.level));
     if (!slot) written.unslotted.push(feature.name);
-    await createItems(actor, [slottedFeat(source, slot)]);
+    await createItems(actor, [slottedFeat(source, slot)], plan);
     markItemsCovered(evidence, actor, sluggify);
   }
 }
 
 async function writeActions(actor, recipe, plan, { evidence, sluggify }) {
   const actions = listOf(recipe.actions).filter((action) => !isCovered(action, actor.items, sluggify));
-  await createItems(actor, sourcesOf(actions, plan.sources));
+  await createItems(actor, sourcesOf(actions, plan.sources), plan);
   markItemsCovered(evidence, actor, sluggify);
 }
 
 /** Lores the actor lacks are created; ones it holds at a lower rank (background lores) are raised. */
-async function writeLores(actor, recipe, sluggify) {
+async function writeLores(actor, recipe, plan, sluggify) {
   const { create, updates } = loreSources(recipe.lores, actor.items, sluggify);
-  await createItems(actor, create);
+  await createItems(actor, create, plan);
   if (updates.length > 0) await actor.updateEmbeddedDocuments("Item", updates);
 }
 
@@ -56,9 +61,9 @@ async function writeSpellcasting(actor, recipe, plan, { sluggify, written }) {
   const castings = listOf(recipe.spellcasting);
   const classSlug = plan.identity.class?.system?.slug ?? null;
   const entrySources = castings.map((casting) => entrySource(casting, classSlug, casting.key)).filter(Boolean);
-  const entryIds = idsByBuildKey(await createItems(actor, entrySources));
+  const entryIds = idsByBuildKey(await createItems(actor, entrySources, plan));
   const spells = spellSources(actor, castings, plan.sources, { entryIds, sluggify });
-  const spellIds = idsByBuildKey(await createItems(actor, spells));
+  const spellIds = idsByBuildKey(await createItems(actor, spells, plan));
   for (const casting of castings) {
     await prepareEntry(actor.items.get(entryIds.get(casting.key)), casting, spellIds);
     written.unplaced.push(...unplacedPreparations(casting, spellIds));
@@ -93,14 +98,14 @@ async function writeGear(actor, recipe, plan, written) {
   const containerIds = new Map();
   for (const key of gear.containers) {
     const source = placedGearSource(plan.sources.get(key), entries.get(key), containerIds.get(gear.parents[key]) ?? null);
-    const [created] = await createItems(actor, [source]);
+    const [created] = await createItems(actor, [source], plan);
     if (created) containerIds.set(key, created.id);
   }
   const items = gear.items.map((key) => {
     const containerId = containerIds.get(gear.parents[key]) ?? null;
     return placedGearSource(plan.sources.get(key), entries.get(key), containerId);
   });
-  await createItems(actor, [...items, ...coinSources(plan)]);
+  await createItems(actor, [...items, ...coinSources(plan)], plan);
 }
 
 function coinSources(plan) {
@@ -108,9 +113,13 @@ function coinSources(plan) {
   return sourcesOf(coins, plan.sources);
 }
 
-async function createItems(actor, sources) {
+/** Creates the sources in one call; on a rebuild every root gets its previous `_id` (else a new one) and keeps it. */
+async function createItems(actor, sources, plan) {
   if (sources.length === 0) return [];
-  return actor.createEmbeddedDocuments("Item", sources, { render: false });
+  const keptId = plan?.keptId;
+  if (typeof keptId !== "function") return actor.createEmbeddedDocuments("Item", sources, { render: false });
+  const identified = sources.map((source) => ({ ...source, _id: keptId(buildKeyOf(source)) ?? foundry.utils.randomID() }));
+  return actor.createEmbeddedDocuments("Item", identified, { render: false, keepId: true });
 }
 
 /** Removes every item name the actor now holds from the evidence's uncovered names (prompts prefer uncovered ones). */

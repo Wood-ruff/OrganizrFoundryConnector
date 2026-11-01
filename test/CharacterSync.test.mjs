@@ -186,6 +186,21 @@ test("a pf2e character's push body carries the totals pf2e prepared", () => {
   assert.deepEqual(body.derivedTotals.strikes, { "Invented Blade": { attack: 10 } });
 });
 
+test("a frightened pf2e character pushes the totals of its copy without conditions and effects", () => {
+  const frightened = {
+    ...pf2eCharacter(),
+    items: { contents: [{ id: "c1", type: "condition" }, { id: "e1", type: "effect" }] },
+    armorClass: { value: 17 },
+    toObject: () => ({ items: [{ _id: "c1", type: "condition" }, { _id: "e1", type: "effect" }, { _id: "f1", type: "feat" }] }),
+    clone: () => pf2eCharacter()
+  };
+
+  const body = syncBody(frightened, world);
+
+  assert.equal(body.derivedTotals.ac, 19);
+  assert.equal(body.derivedTotals.hp, 41);
+});
+
 const dnd5eWorld = { id: "w2", coreVersion: "14.369", systemId: "dnd5e", systemVersion: "6.0.6" };
 
 function dnd5eCharacter() {

@@ -101,13 +101,13 @@
       "Built": "{name} was built from Organizr.",
       "Rebuilt": "{name} was rebuilt from Organizr.",
       "Findings": "{name} was built with {findings} findings: {missing} not found, {custom} from Organizr sheets, {choices} choices without a hint, {differences} numbers differ. The report is in the chat log.",
-      "RefreshUnavailable": "nothing was changed: rebuilding a character that is already in this world needs a later connector version",
+      "RebuiltFindings": "{name} was rebuilt with {findings} findings: {missing} not found, {custom} from Organizr sheets, {choices} choices without a hint, {differences} numbers differ. The report is in the chat log.",
       "UnplacedPreparations": "{name}: {count} prepared copies found no free spell slot.",
       "Errors": {
         "RecipeVersion": "{name}: Organizr sent a build recipe this connector cannot read. Update the Organizr connector module.",
         "NoClass": "{name}: pf2e's compendium has no single class named \"{className}\", so no actor was created.",
-        "Failed": "{name}: the build failed, so the new actor was removed ({message}).",
-        "RefreshFailed": "{name} was not fully rebuilt ({message}). What was rebuilt stays; import it again to refresh it."
+        "Failed": "{name}: the build failed, so nothing was created or changed ({message}).",
+        "RefreshFailed": "{name} is only partly rebuilt ({message}). What was rebuilt stays and the build report lists it; import it again to refresh it fully."
       },
       "Card": {
         "Title": "Organizr build of {name}",
@@ -178,6 +178,13 @@
         "BatchSkipped": "{count} containers already in this world are skipped, so taken items do not come back and what they hold in Foundry stays.",
         "BatchRestore": "Also refresh these containers: replaces what they hold with Organizr's contents and restores their coins and the contents' uses",
         "BatchCharacters": "Refreshed characters take Organizr's items and XP; send a character to Organizr first to keep changes made in Foundry."
+      },
+      "Pf2e": {
+        "CharacterBody": "Rebuilds the character from Organizr with pf2e's compendium items: ancestry, background, class, feats, actions, lores, spells and gear are replaced, and the level, XP, attributes, skills, languages, biography, equipped and invested states and prepared spells come from Organizr. Keeps the token, current HP (up to the new maximum), temporary HP, hero points, spent focus points and spell slots, expended preparations, innate spell uses, item quantities, charges and damage, coins, the choices made in Foundry's prompts, conditions, effects and the items added in Foundry.",
+        "RestoreInventory": "Also restore item quantities, charges, damage and coins from Organizr",
+        "BatchCharacters": "Refreshed pf2e characters are rebuilt from Organizr and keep their current HP, hero points, spent focus points and spell slots, item quantities, coins, conditions, effects and the items added in Foundry.",
+        "BatchKeeps": "Refreshed actors keep their token (image, name, disposition), current HP (up to the new maximum), temporary HP, spent focus points, spell slots, conditions and effects; refreshed items are replaced.",
+        "BatchRestoreCharacters": "Also restore the rebuilt characters' item quantities, charges, damage and coins from Organizr"
       }
     },
     "Send": {

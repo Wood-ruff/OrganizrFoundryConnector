@@ -1,6 +1,7 @@
 import { dnd5eDerivedTotals } from "./Dnd5eTotals.mjs";
 import { pf1DerivedTotals } from "./Pf1Totals.mjs";
 import { pf2eDerivedTotals } from "./Pf2eTotals.mjs";
+import { totalsActor } from "./Pf2eTotalsActor.mjs";
 
 const PF1_SYSTEM_ID = "pf1";
 const PF2E_SYSTEM_ID = "pf2e";
@@ -18,12 +19,12 @@ export function sendsDerivedTotals(systemId, documentName, type) {
 }
 
 /**
- * The prepared totals a send of this document carries in this world's system (dnd5e under the given rules version),
- * or null when it carries none.
+ * The prepared totals a send of this document carries in this world's system (dnd5e under the given rules version, a
+ * pf2e character without its conditions and effects), or null when it carries none.
  */
 export function derivedTotalsFor(systemId, document, rulesVersion = "") {
   if (!sendsDerivedTotals(systemId, document?.documentName, document?.type)) return null;
   if (systemId === DND5E_SYSTEM_ID) return dnd5eDerivedTotals(document.system, rulesVersion);
-  if (systemId === PF2E_SYSTEM_ID) return pf2eDerivedTotals(document);
+  if (systemId === PF2E_SYSTEM_ID) return pf2eDerivedTotals(totalsActor(document));
   return pf1DerivedTotals(document.system);
 }

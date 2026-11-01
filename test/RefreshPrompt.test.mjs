@@ -1,13 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { batchPrompt, needsBatchConfirm, refreshPrompt } from "../scripts/service/RefreshPrompt.mjs";
+import { batchImportOptions, batchPrompt, batchRestore, needsBatchConfirm, refreshPrompt } from "../scripts/service/RefreshPrompt.mjs";
 
 const BATCH_KEYS = {
   keepsKey: "ORGANIZR.Refresh.BatchKeeps",
   charactersKey: "ORGANIZR.Refresh.BatchCharacters",
   skippedKey: "ORGANIZR.Refresh.BatchSkipped",
-  restoreKey: "ORGANIZR.Refresh.BatchRestore"
+  restoreKey: "ORGANIZR.Refresh.BatchRestore",
+  showCharacterRestore: false,
+  characterRestoreKey: "ORGANIZR.Refresh.Pf2e.BatchRestoreCharacters"
 };
 
 async function readLang() {
@@ -98,4 +100,88 @@ test("every dnd5e refresh text exists and names what a dnd5e refresh keeps", asy
   assert.match(texts.BatchRestore, /replaces what they hold/);
   for (const text of [texts.ActorBody, texts.CharacterBody, texts.BatchKeeps]) assert.match(text, /spent spell slots/);
   assert.doesNotMatch(texts.BatchCharacters, /currency/);
+});
+
+test("a pf2e character refresh reads the pf2e rebuild texts and offers the restore box", () => {
+  const pf2e = "ORGANIZR.Refresh.Pf2e";
+  assert.deepEqual(refreshPrompt("Wren Halloway", "character", "pf2e"),
+    { name: "Wren Halloway", bodyKey: `${pf2e}.CharacterBody`, restoreKey: `${pf2e}.RestoreInventory`, showRestore: true });
+});
+
+test("in a pf2e world loot, NPCs and items keep the shared refresh texts", () => {
+  assert.deepEqual(refreshPrompt("Mossy Chest", "loot", "pf2e"),
+    { name: "Mossy Chest", bodyKey: "ORGANIZR.Refresh.LootBody", restoreKey: "ORGANIZR.Refresh.RestoreInventory", showRestore: true });
+  assert.deepEqual(refreshPrompt("Bramble Sentry", "npc", "pf2e"),
+    { name: "Bramble Sentry", bodyKey: "ORGANIZR.Refresh.ActorBody", restoreKey: "ORGANIZR.Refresh.RestoreInventory", showRestore: false });
+  assert.equal(refreshPrompt("Ember Lance", "spell", "pf2e").bodyKey, "ORGANIZR.Refresh.ItemBody");
+});
+
+test("only a pf2e world switches characters to the rebuild texts; dnd5e and pf1 characters keep theirs", () => {
+  assert.equal(refreshPrompt("Tavrin Test", "character", "dnd5e").bodyKey, "ORGANIZR.Refresh.Dnd5e.CharacterBody");
+  assert.equal(refreshPrompt("Tavrin Test", "character", "dnd5e").showRestore, false);
+  assert.equal(refreshPrompt("Ilva Test", "character", "pf1").bodyKey, "ORGANIZR.Refresh.CharacterBody");
+  assert.equal(refreshPrompt("Ilva Test", "character").bodyKey, "ORGANIZR.Refresh.CharacterBody");
+});
+
+test("the batch prompt of a pf2e world reads the pf2e keeps and characters texts and offers the characters' box", () => {
+  const plan = {
+    create: [], refresh: [{ fileId: 2, type: "character", buildsFromRecipe: true }], skippedLoot: [{ fileId: 3, type: "loot" }]
+  };
+  assert.deepEqual(batchPrompt(plan, "pf2e"), {
+    create: 0, refresh: 1, characters: 1, skipped: 1, showRestore: true, ...BATCH_KEYS,
+    keepsKey: "ORGANIZR.Refresh.Pf2e.BatchKeeps",
+    charactersKey: "ORGANIZR.Refresh.Pf2e.BatchCharacters",
+    showCharacterRestore: true
+  });
+});
+
+test("a pf2e batch without rebuilt characters shows no characters' box; other worlds never do", () => {
+  const npcOnly = { create: [], refresh: [{ fileId: 4, type: "npc", buildsFromRecipe: false }], skippedLoot: [] };
+  assert.equal(batchPrompt(npcOnly, "pf2e").showCharacterRestore, false);
+  assert.equal(batchPrompt(npcOnly, "pf2e").keepsKey, "ORGANIZR.Refresh.Pf2e.BatchKeeps");
+  const character = { create: [], refresh: [{ fileId: 2, type: "character", buildsFromRecipe: true }], skippedLoot: [] };
+  for (const systemId of ["pf1", "dnd5e", ""]) assert.equal(batchPrompt(character, systemId).showCharacterRestore, false, systemId);
+  assert.equal(batchPrompt(character, "pf1").keepsKey, "ORGANIZR.Refresh.BatchKeeps");
+  assert.equal(batchPrompt(character, "dnd5e").keepsKey, "ORGANIZR.Refresh.Dnd5e.BatchKeeps");
+});
+
+test("the batch answer restores loot only when some was skipped and rebuilt characters only when their box was ticked", () => {
+  const skipping = { create: [], refresh: [], skippedLoot: [{ fileId: 3, type: "loot" }] };
+  const noSkip = { create: [], refresh: [], skippedLoot: [] };
+  assert.deepEqual(batchRestore({ restoreInventory: true, restoreCharacters: false }, skipping), { inventory: true, characters: false });
+  assert.deepEqual(batchRestore({ restoreInventory: true, restoreCharacters: true }, noSkip), { inventory: false, characters: true });
+  assert.deepEqual(batchRestore({ restoreInventory: true }, skipping), { inventory: true, characters: false });
+  assert.deepEqual(batchRestore(null, skipping), { inventory: false, characters: false });
+});
+
+test("each sheet of an Import all gets its own restore choice: rebuilt characters the characters' box, the rest the loot box", () => {
+  const rebuilt = { fileId: 2, type: "character", buildsFromRecipe: true, uuid: "Actor.fxActor0000000002" };
+  const npc = { fileId: 4, type: "npc", buildsFromRecipe: false, uuid: null };
+  const pf1Character = { fileId: 5, type: "character", buildsFromRecipe: false };
+  const charactersOnly = { inventory: false, characters: true };
+  const lootOnly = { inventory: true, characters: false };
+
+  assert.deepEqual(batchImportOptions(rebuilt, charactersOnly), { recordedUuid: "Actor.fxActor0000000002", restoreInventory: true });
+  assert.deepEqual(batchImportOptions(rebuilt, lootOnly), { recordedUuid: "Actor.fxActor0000000002", restoreInventory: false });
+  assert.deepEqual(batchImportOptions(npc, charactersOnly), { recordedUuid: null, restoreInventory: false });
+  assert.deepEqual(batchImportOptions(npc, lootOnly), { recordedUuid: null, restoreInventory: true });
+  assert.deepEqual(batchImportOptions(pf1Character, lootOnly), { recordedUuid: null, restoreInventory: true });
+});
+
+test("the pf2e batch keeps text names only what a pf2e refresh keeps", async () => {
+  const texts = (await readLang()).ORGANIZR.Refresh.Pf2e;
+  assert.doesNotMatch(texts.BatchKeeps, /pf1|buffs|nonlethal|prepared casts/);
+  for (const kept of [/token/, /current HP/, /focus points/, /spell slots/, /conditions/, /effects/]) assert.match(texts.BatchKeeps, kept);
+  assert.match(texts.BatchRestoreCharacters, /coins/);
+});
+
+test("the pf2e rebuild texts exist and name what a rebuilt character keeps and what Organizr replaces", async () => {
+  const texts = (await readLang()).ORGANIZR.Refresh.Pf2e;
+  for (const key of ["CharacterBody", "RestoreInventory", "BatchCharacters"]) assert.equal(typeof texts[key], "string", key);
+  for (const kept of [/HP/, /hero points/, /conditions/, /focus points/, /spell slots/, /quantities/, /choices/]) {
+    assert.match(texts.CharacterBody, kept);
+  }
+  for (const replaced of [/XP/, /equipped/, /prepared/]) assert.match(texts.CharacterBody, replaced);
+  assert.match(texts.RestoreInventory, /coins/);
+  assert.match(texts.BatchCharacters, /rebuilt/);
 });

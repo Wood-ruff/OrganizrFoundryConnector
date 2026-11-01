@@ -2,7 +2,6 @@ import { hasFindings, reportToast, reportView } from "../service/BuildReport.mjs
 import { differenceLabel } from "../service/BuildCardLabels.mjs";
 
 const TEMPLATE = "modules/organizr-foundry-connector/templates/build-report.hbs";
-const FINDINGS_KEY = "ORGANIZR.Build.Findings";
 const REPORT_LISTS = ["identity", "features", "actions", "spells", "inventory", "lores", "languages", "coins"];
 const SPEAKER = "Organizr";
 
@@ -20,7 +19,7 @@ export function startBuildNotice(name) {
 export function notifyBuild(report) {
   const { key, data } = reportToast(report);
   const options = { localize: true, format: data };
-  if (key === FINDINGS_KEY) ui.notifications.warn(key, options);
+  if (hasFindings(report)) ui.notifications.warn(key, options);
   else ui.notifications.info(key, options);
 }
 

@@ -6,16 +6,22 @@ import {
 import { boostInput, boostPlan, manualReason } from "../service/Pf2eBoosts.mjs";
 import { actorSeed, languageValues, playStateUpdate } from "../service/Pf2eActorSeed.mjs";
 import { filledReport } from "../service/BuildReport.mjs";
+import {
+  actorStateUpdate, containerRestores, entrySlotUpdates, itemStateUpdates, keptRootId, rootIdsToDelete,
+  snapshotPlayState, spellUseUpdates
+} from "../service/BuiltPlayState.mjs";
+import { actorRefreshUpdate } from "../service/Pf2eActorRefresh.mjs";
 import { totalsDifferences } from "../service/TotalsCompare.mjs";
 import { pf2eDerivedTotals } from "../service/Pf2eTotals.mjs";
+import { totalsActor } from "../service/Pf2eTotalsActor.mjs";
 import { readWorldLink } from "../config/ModuleSettings.mjs";
 import { worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { indexRows, packSources } from "../persistence/CompendiumIndex.mjs";
 import { withChoicePrompts } from "./ChoicePrompts.mjs";
 import { linkedCopy, recordLink, stampDocumentUuid, withStoredPortrait } from "./ImportSteps.mjs";
-import { writeBuildItems } from "./CharacterBuildWrites.mjs";
-import { startBuildNotice } from "./BuildReport.mjs";
+import { emptyWritten, writeBuildItems } from "./CharacterBuildWrites.mjs";
+import { postBuildReport, startBuildNotice } from "./BuildReport.mjs";
 
 const IDENTITY_KINDS = ["ancestry", "heritage", "background", "class", "deity"];
 const NO_COMPANIONS = Object.freeze({ count: 0, failed: 0, folderName: null });
@@ -26,8 +32,10 @@ const organizr = createOrganizrClient();
 /**
  * Builds a pf2e character from its Organizr recipe: pf2e's own compendium items plus the linked sheets' exports for
  * what the compendium lacks, every choice prompt answered from the recipe. Plans first (nothing is written when the
- * class has no single match), then creates the actor and its items; a failure after that removes the actor.
- * Returns importSheet's shape plus `build` (the build report); warnings are localization keys.
+ * class has no single match), then creates the actor and its items; a failure after that removes the actor. A world
+ * copy already linked to the sheet is rebuilt in place instead, keeping its play state (`restoreInventory` takes
+ * Organizr's quantities and coins). Returns importSheet's shape plus `build` (the build report); warnings are
+ * localization keys.
  */
 export async function importCharacterBuild(fileId, { recordedUuid = null, restoreInventory = false } = {}) {
   const link = readWorldLink();
@@ -36,13 +44,11 @@ export async function importCharacterBuild(fileId, { recordedUuid = null, restor
   const { document: data, recipe } = await fetchRecipe(link, fileId, world.systemId);
   const document = appliesPortrait("Actor", data) ? await withStoredPortrait(data, link, warnings) : data;
   const { target, duplicates } = linkedCopy(fileId, "Actor", recordedUuid);
-  if (target) await refreshBuiltActor(target, { restoreInventory });
   const notice = startBuildNotice(recipe.name);
   let built;
   try {
-    const plan = await planBuild(recipe);
-    notice.advance(PLANNED_SHARE);
-    built = await createBuiltActor(document, recipe, plan);
+    if (target) built = await rebuildActor(target, document, recipe, { notice, restoreInventory });
+    else built = await buildNewActor(document, recipe, notice);
   } finally {
     notice.close();
   }
@@ -50,7 +56,14 @@ export async function importCharacterBuild(fileId, { recordedUuid = null, restor
   await recordLink(link, fileId, built.actor, world, warnings);
   const { actor, report } = built;
   const companions = NO_COMPANIONS;
-  return { name: actor.name, uuid: actor.uuid, updated: false, warnings, duplicates, companions, build: report };
+  const updated = Boolean(target);
+  return { name: actor.name, uuid: actor.uuid, updated, warnings, duplicates, companions, build: report };
+}
+
+async function buildNewActor(document, recipe, notice) {
+  const plan = await planBuild(recipe);
+  notice.advance(PLANNED_SHARE);
+  return createBuiltActor(document, recipe, plan);
 }
 
 /** The recipe answer with the sheet flag naming the requested file; an unreadable recipe is refused before any work. */
@@ -61,10 +74,68 @@ async function fetchRecipe(link, fileId, systemId) {
   return { document: withRequestedFileId(payload.document, fileId), recipe: payload.recipe };
 }
 
-/** Rebuilding a linked actor in place (with or without restoring its inventory) is not available yet; nothing changes. */
-async function refreshBuiltActor(target, options) {
-  const message = game.i18n.localize("ORGANIZR.Build.RefreshUnavailable");
-  throw buildError("ORGANIZR.Build.Errors.RefreshFailed", { name: target.name, message, ...options });
+/**
+ * Rebuilds a linked actor in place: snapshots its play state, plans (a failure here changes nothing), deletes the
+ * build's roots with everything they grant, writes the build again with the roots' previous ids and then restores the
+ * kept state. A failure after the delete posts the report of what was written and throws RefreshFailed.
+ */
+async function rebuildActor(actor, document, recipe, { notice, restoreInventory }) {
+  const current = actor.toObject();
+  const snapshot = snapshotPlayState(current);
+  const plan = await planRefresh(recipe, snapshot);
+  notice.advance(PLANNED_SHARE);
+  const outcome = { prompts: [] };
+  const written = emptyWritten();
+  try {
+    await actor.deleteEmbeddedDocuments("Item", rootIdsToDelete(current), { render: false });
+    await actor.update(actorRefreshUpdate(refreshSeed(document, recipe, plan), current));
+    await writeWithPrompts(actor, recipe, plan, { outcome, written, previous: snapshot.choices });
+    await restorePlayState(actor, snapshot, restoreInventory);
+    return { actor, report: buildReport(actor, recipe, plan, outcome.prompts, written, true) };
+  } catch (error) {
+    console.error("Organizr connector: character refresh failed", error);
+    await postPartialReport(actor, recipe, plan, { prompts: outcome.prompts, written, error });
+    throw buildError("ORGANIZR.Build.Errors.RefreshFailed", { name: actor.name, message: error.message });
+  }
+}
+
+/** The build plan of a refresh, whose roots take their previous ids; any failure is reported before anything changes. */
+async function planRefresh(recipe, snapshot) {
+  try {
+    const plan = await planBuild(recipe);
+    return { ...plan, keptId: (key) => keptRootId(snapshot, key) };
+  } catch (error) {
+    if (error.buildKey) throw error;
+    console.error("Organizr connector: character refresh plan failed", error);
+    throw buildError("ORGANIZR.Build.Errors.Failed", { name: recipe?.name ?? "", message: error.message });
+  }
+}
+
+function refreshSeed(document, recipe, plan) {
+  return actorSeed(document, recipe, { boosts: plan.boosts, languages: plan.languages.value });
+}
+
+/** Puts kept contents back into their containers, then the kept item, spell, slot and actor values (within the new maxima). */
+async function restorePlayState(actor, snapshot, restoreInventory) {
+  const sources = actor.items.map((item) => item.toObject());
+  const updates = [
+    ...containerRestores(snapshot, sources.map((source) => source._id)),
+    ...(restoreInventory ? [] : itemStateUpdates(snapshot, sources)),
+    ...spellUseUpdates(snapshot, sources),
+    ...entrySlotUpdates(snapshot, sources)
+  ];
+  if (updates.length > 0) await actor.updateEmbeddedDocuments("Item", updates, { render: false });
+  await actor.update(actorStateUpdate(snapshot, actor.hitPoints?.max, actor.system?.resources?.focus?.max));
+}
+
+async function postPartialReport(actor, recipe, plan, { prompts, written, error }) {
+  try {
+    const report = buildReport(actor, recipe, plan, prompts, written, true);
+    report.notes.push(error.message);
+    await postBuildReport(report);
+  } catch (reportError) {
+    console.warn("Organizr connector: the partial rebuild's report was not posted", reportError);
+  }
 }
 
 /**
@@ -104,16 +175,22 @@ async function createBuiltActor(document, recipe, plan) {
 }
 
 async function buildOnto(actor, recipe, plan) {
-  const sluggify = game.pf2e.system.sluggify;
-  const evidence = recipeEvidence(recipe, sluggify);
   const outcome = { prompts: [] };
-  const written = await withChoicePrompts(evidence, outcome, () => writeBuildItems(actor, recipe, plan, evidence));
+  const written = emptyWritten();
+  await writeWithPrompts(actor, recipe, plan, { outcome, written, previous: new Map() });
   await actor.update(playStateUpdate(recipe, actor.hitPoints?.max, actor.system?.resources?.focus?.max));
-  return buildReport(actor, recipe, plan, outcome.prompts, written);
+  return buildReport(actor, recipe, plan, outcome.prompts, written, false);
 }
 
-function buildReport(actor, recipe, plan, prompts, written) {
-  return filledReport(actor.name, false, {
+/** Writes the build's items while every choice prompt is answered from the recipe and the previous selections. */
+async function writeWithPrompts(actor, recipe, plan, { outcome, written, previous }) {
+  const sluggify = game.pf2e.system.sluggify;
+  const evidence = recipeEvidence(recipe, sluggify, previous);
+  await withChoicePrompts(evidence, outcome, () => writeBuildItems(actor, recipe, plan, evidence, written));
+}
+
+function buildReport(actor, recipe, plan, prompts, written, updated) {
+  return filledReport(actor.name, updated, {
     findings: matchFindings(plan.matches),
     unknownLanguages: plan.languages.unknown,
     unslotted: written.unslotted,
@@ -122,7 +199,7 @@ function buildReport(actor, recipe, plan, prompts, written) {
     itemSources: actor.items.map((item) => item.toObject()),
     manualAttributes: plan.manual,
     unspentBoosts: plan.boosts?.unspent ?? 0,
-    differences: totalsDifferences(recipe.expected, pf2eDerivedTotals(actor)),
+    differences: totalsDifferences(recipe.expected, pf2eDerivedTotals(totalsActor(actor))),
     notes: [...(recipe.notes ?? []), ...written.unplaced.map(unplacedNote)]
   });
 }

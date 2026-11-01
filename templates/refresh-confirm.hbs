@@ -7,6 +7,12 @@
   {{else}}
     <p>{{localize bodyKey}}</p>
   {{/if}}
+  {{#if batch.showCharacterRestore}}
+    <label class="organizr-refresh-restore">
+      <input type="checkbox" name="restoreCharacters">
+      <span>{{localize batch.characterRestoreKey}}</span>
+    </label>
+  {{/if}}
   {{#if showRestore}}
     <label class="organizr-refresh-restore">
       <input type="checkbox" name="restoreInventory">

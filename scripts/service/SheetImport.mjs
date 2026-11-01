@@ -170,7 +170,8 @@ function linkedFileIdOf(document) {
   return sheetFlag(document)?.fileId ?? null;
 }
 
-function tokenFollowsImage(textureSrc, image) {
+/** Whether a token texture shows the actor image (none, the default token image or the same image). */
+export function tokenFollowsImage(textureSrc, image) {
   return !textureSrc || textureSrc === DEFAULT_TOKEN_IMAGE || textureSrc === image;
 }
 

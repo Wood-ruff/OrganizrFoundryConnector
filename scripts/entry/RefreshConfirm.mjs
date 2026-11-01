@@ -11,7 +11,10 @@ export async function confirmRefresh(name, sheetType, systemId) {
   return askRefresh(title, content, "ORGANIZR.Refresh.Confirm");
 }
 
-/** Asks before an "Import all" that refreshes copies or skips linked loot; resolves to { restoreInventory } or null. */
+/**
+ * Asks before an "Import all" that refreshes copies or skips linked loot; resolves to
+ * { restoreInventory, restoreCharacters } or null.
+ */
 export async function confirmBatch(plan, systemId) {
   const prompt = batchPrompt(plan, systemId);
   const content = await renderContent({ batch: prompt, restoreKey: prompt.restoreKey, showRestore: prompt.showRestore });
@@ -37,5 +40,9 @@ async function askRefresh(title, content, confirmLabel) {
 }
 
 function readAnswer(event, button) {
-  return { restoreInventory: Boolean(button.form?.elements?.restoreInventory?.checked) };
+  const elements = button.form?.elements;
+  return {
+    restoreInventory: Boolean(elements?.restoreInventory?.checked),
+    restoreCharacters: Boolean(elements?.restoreCharacters?.checked)
+  };
 }
