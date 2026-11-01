@@ -1,0 +1,673 @@
+{
+  "format": "organizr-pf2e-recipe",
+  "version": 1,
+  "name": "Tessa Quillmoor",
+  "level": 5,
+  "xp": 400,
+  "identity": {
+    "ancestry": {
+      "key": "id:ancestry",
+      "name": "Human"
+    },
+    "heritage": {
+      "key": "id:heritage",
+      "name": "Versatile Human"
+    },
+    "background": {
+      "key": "id:background",
+      "name": "Scholar (Occultism)"
+    },
+    "class": {
+      "key": "id:class",
+      "name": "Fighter"
+    },
+    "deity": null
+  },
+  "keyAttribute": "str",
+  "attributes": {
+    "str": 4,
+    "dex": 2,
+    "con": 2,
+    "int": 1,
+    "wis": 1,
+    "cha": 0
+  },
+  "skills": {
+    "acrobatics": 1,
+    "arcana": 0,
+    "athletics": 2,
+    "crafting": 0,
+    "deception": 0,
+    "diplomacy": 0,
+    "intimidation": 1,
+    "medicine": 0,
+    "nature": 0,
+    "occultism": 1,
+    "performance": 0,
+    "religion": 0,
+    "society": 1,
+    "stealth": 0,
+    "survival": 1,
+    "thievery": 0
+  },
+  "lores": [
+    {
+      "key": "l:warfare-lore",
+      "name": "Warfare Lore",
+      "rank": 1
+    },
+    {
+      "key": "l:library-lore",
+      "name": "Library",
+      "rank": 2
+    }
+  ],
+  "languages": [
+    "Common",
+    "Elven"
+  ],
+  "biography": {
+    "facts": {
+      "age": "31",
+      "gender": "Female"
+    },
+    "texts": {
+      "appearance": "<p>Tall, with ink-stained fingers.</p>",
+      "backstory": "<p>She left the archive to see the roads.</p>"
+    }
+  },
+  "features": [
+    {
+      "key": "f:101",
+      "name": "Steadfast Guard",
+      "category": "class",
+      "level": 2,
+      "fileId": 101,
+      "document": {
+        "name": "Steadfast Guard",
+        "type": "feat",
+        "img": "systems/pf2e/icons/actions/Passive.webp",
+        "system": {
+          "_migration": {
+            "version": 0.959,
+            "previous": null
+          },
+          "actionType": {
+            "value": "passive"
+          },
+          "actions": {
+            "value": null
+          },
+          "category": "class",
+          "description": {
+            "value": "<p><strong>Effect</strong> You plant your feet and hold the line.</p>",
+            "gm": ""
+          },
+          "frequency": null,
+          "selfEffect": null,
+          "publication": {
+            "title": "",
+            "authors": "",
+            "license": "ORC",
+            "remaster": true
+          },
+          "rules": [],
+          "slug": "steadfast-guard",
+          "traits": {
+            "value": [
+              "fighter"
+            ],
+            "otherTags": []
+          },
+          "level": {
+            "value": 2
+          },
+          "location": null,
+          "prerequisites": {
+            "value": []
+          }
+        },
+        "effects": [],
+        "flags": {},
+        "_stats": {
+          "coreVersion": "14.361",
+          "systemId": "pf2e",
+          "systemVersion": "8.6.1"
+        }
+      }
+    },
+    {
+      "key": "f:n:toughness",
+      "name": "Toughness",
+      "category": "general",
+      "level": 3,
+      "fileId": null,
+      "document": null
+    },
+    {
+      "key": "f:199",
+      "name": "Keen Recall",
+      "category": "skill",
+      "level": 2,
+      "fileId": 199,
+      "document": null
+    }
+  ],
+  "actions": [
+    {
+      "key": "a:102",
+      "name": "Shield Shove",
+      "fileId": 102,
+      "document": {
+        "name": "Shield Shove",
+        "type": "action",
+        "img": "systems/pf2e/icons/actions/OneAction.webp",
+        "system": {
+          "_migration": {
+            "version": 0.959,
+            "previous": null
+          },
+          "actionType": {
+            "value": "action"
+          },
+          "actions": {
+            "value": 1
+          },
+          "category": "offensive",
+          "description": {
+            "value": "<p><strong>Effect</strong> You push a foe back with a quick shove.</p>",
+            "gm": ""
+          },
+          "frequency": null,
+          "selfEffect": null,
+          "deathNote": false,
+          "publication": {
+            "title": "",
+            "authors": "",
+            "license": "ORC",
+            "remaster": true
+          },
+          "rules": [],
+          "slug": "shield-shove",
+          "traits": {
+            "value": [
+              "attack"
+            ],
+            "otherTags": []
+          }
+        },
+        "effects": [],
+        "flags": {},
+        "_stats": {
+          "coreVersion": "14.361",
+          "systemId": "pf2e",
+          "systemVersion": "8.6.1"
+        }
+      }
+    },
+    {
+      "key": "a:n:quick-step",
+      "name": "Quick Step",
+      "fileId": null,
+      "document": null
+    }
+  ],
+  "spellcasting": [
+    {
+      "key": "e:innate-gifts",
+      "name": "Innate Gifts",
+      "tradition": "primal",
+      "type": "innate",
+      "flexible": false,
+      "attribute": "cha",
+      "proficiency": "spellcasting",
+      "rank": 1,
+      "slots": {},
+      "slotsUsed": {},
+      "spells": [
+        {
+          "key": "e:innate-gifts/s:103",
+          "name": "Glimmer Spark",
+          "rank": 1,
+          "cantrip": false,
+          "focus": false,
+          "signature": false,
+          "prepared": 0,
+          "usesPerDay": 1,
+          "fileId": 103,
+          "document": {
+            "name": "Glimmer Spark",
+            "type": "spell",
+            "img": "systems/pf2e/icons/default-icons/spell.svg",
+            "system": {
+              "_migration": {
+                "version": 0.959,
+                "previous": null
+              },
+              "description": {
+                "value": "<p>A small spark leaps from your fingertip.</p>",
+                "gm": ""
+              },
+              "rules": [],
+              "slug": "glimmer-spark",
+              "publication": {
+                "title": "",
+                "authors": "",
+                "license": "ORC",
+                "remaster": true
+              },
+              "traits": {
+                "value": [
+                  "fire",
+                  "manipulate"
+                ],
+                "rarity": "common",
+                "traditions": [
+                  "primal"
+                ],
+                "otherTags": []
+              },
+              "level": {
+                "value": 1
+              },
+              "requirements": "",
+              "target": {
+                "value": "1 creature"
+              },
+              "range": {
+                "value": ""
+              },
+              "area": null,
+              "time": {
+                "value": "2"
+              },
+              "duration": {
+                "value": "",
+                "sustained": false
+              },
+              "damage": {
+                "0": {
+                  "formula": "1d4",
+                  "type": "fire",
+                  "kinds": [
+                    "damage"
+                  ],
+                  "category": null,
+                  "materials": [],
+                  "applyMod": false
+                }
+              },
+              "defense": null,
+              "cost": {
+                "value": ""
+              },
+              "counteraction": false,
+              "location": {
+                "value": null,
+                "heightenedLevel": 1
+              }
+            },
+            "effects": [],
+            "flags": {},
+            "_stats": {
+              "coreVersion": "14.361",
+              "systemId": "pf2e",
+              "systemVersion": "8.6.1"
+            }
+          }
+        },
+        {
+          "key": "e:innate-gifts/s:n:dancing-mote",
+          "name": "Dancing Mote",
+          "rank": 1,
+          "cantrip": true,
+          "focus": false,
+          "signature": false,
+          "prepared": 0,
+          "usesPerDay": null,
+          "fileId": null,
+          "document": null
+        }
+      ]
+    }
+  ],
+  "inventory": [
+    {
+      "key": "i:104",
+      "name": "Cinder Blade",
+      "quantity": 1,
+      "equipped": true,
+      "invested": false,
+      "container": null,
+      "runes": {
+        "potency": 1,
+        "striking": 1,
+        "property": []
+      },
+      "fileId": 104,
+      "document": {
+        "name": "Cinder Blade",
+        "type": "weapon",
+        "img": "systems/pf2e/icons/default-icons/weapon.svg",
+        "system": {
+          "_migration": {
+            "version": 0.959,
+            "previous": null
+          },
+          "description": {
+            "value": "<p>A blade with a soot-dark edge.</p>",
+            "gm": ""
+          },
+          "publication": {
+            "title": "",
+            "authors": "",
+            "license": "ORC",
+            "remaster": true
+          },
+          "rules": [],
+          "slug": null,
+          "level": {
+            "value": 4
+          },
+          "quantity": 1,
+          "baseItem": "longsword",
+          "bulk": {
+            "value": 1
+          },
+          "hp": {
+            "value": 0,
+            "max": 0
+          },
+          "hardness": 0,
+          "price": {
+            "value": {
+              "gp": 100
+            },
+            "per": 1
+          },
+          "containerId": null,
+          "size": "med",
+          "material": {
+            "type": null,
+            "grade": null
+          },
+          "traits": {
+            "value": [
+              "magical"
+            ],
+            "rarity": "common",
+            "otherTags": []
+          },
+          "equipped": {
+            "carryType": "worn",
+            "handsHeld": 0,
+            "invested": null
+          },
+          "identification": {
+            "status": "identified",
+            "unidentified": {
+              "name": "",
+              "img": "",
+              "data": {
+                "description": {
+                  "value": ""
+                }
+              }
+            }
+          },
+          "usage": {
+            "value": "held-in-one-hand",
+            "canBeAmmo": false
+          },
+          "category": "martial",
+          "group": "sword",
+          "bonus": {
+            "value": 0
+          },
+          "damage": {
+            "dice": 1,
+            "die": "d8",
+            "damageType": "slashing",
+            "modifier": 0,
+            "persistent": null
+          },
+          "splashDamage": {
+            "value": 0
+          },
+          "range": null,
+          "reload": {
+            "value": null
+          },
+          "expend": null,
+          "ammo": null,
+          "selectedAmmoId": null,
+          "grade": null,
+          "runes": {
+            "potency": 1,
+            "striking": 1,
+            "property": []
+          },
+          "specific": {
+            "material": {
+              "type": null,
+              "grade": null
+            },
+            "runes": {
+              "potency": 1,
+              "striking": 1,
+              "property": []
+            }
+          },
+          "subitems": []
+        },
+        "effects": [],
+        "flags": {},
+        "_stats": {
+          "coreVersion": "14.361",
+          "systemId": "pf2e",
+          "systemVersion": "8.6.1"
+        }
+      }
+    },
+    {
+      "key": "i:n:satchel",
+      "name": "Satchel",
+      "quantity": 1,
+      "equipped": true,
+      "invested": false,
+      "container": null,
+      "runes": null,
+      "fileId": null,
+      "document": null
+    },
+    {
+      "key": "i:105",
+      "name": "Brass Lantern",
+      "quantity": 1,
+      "equipped": false,
+      "invested": false,
+      "container": "i:n:satchel",
+      "runes": null,
+      "fileId": 105,
+      "document": {
+        "name": "Brass Lantern",
+        "type": "equipment",
+        "img": "systems/pf2e/icons/default-icons/equipment.svg",
+        "system": {
+          "_migration": {
+            "version": 0.959,
+            "previous": null
+          },
+          "description": {
+            "value": "<p>A dented lantern with a shutter.</p>",
+            "gm": ""
+          },
+          "publication": {
+            "title": "",
+            "authors": "",
+            "license": "ORC",
+            "remaster": true
+          },
+          "rules": [],
+          "slug": null,
+          "level": {
+            "value": 0
+          },
+          "quantity": 1,
+          "baseItem": null,
+          "bulk": {
+            "value": 0.1
+          },
+          "hp": {
+            "value": 0,
+            "max": 0
+          },
+          "hardness": 0,
+          "price": {
+            "value": {
+              "gp": 1
+            },
+            "per": 1
+          },
+          "containerId": null,
+          "size": "med",
+          "material": {
+            "type": null,
+            "grade": null
+          },
+          "traits": {
+            "value": [],
+            "rarity": "common",
+            "otherTags": []
+          },
+          "equipped": {
+            "carryType": "worn",
+            "handsHeld": 0,
+            "invested": null
+          },
+          "identification": {
+            "status": "identified",
+            "unidentified": {
+              "name": "",
+              "img": "",
+              "data": {
+                "description": {
+                  "value": ""
+                }
+              }
+            }
+          },
+          "usage": {
+            "value": "carried"
+          },
+          "subitems": []
+        },
+        "effects": [],
+        "flags": {},
+        "_stats": {
+          "coreVersion": "14.361",
+          "systemId": "pf2e",
+          "systemVersion": "8.6.1"
+        }
+      }
+    },
+    {
+      "key": "i:n:rations",
+      "name": "Rations",
+      "quantity": 4,
+      "equipped": false,
+      "invested": false,
+      "container": "i:n:satchel",
+      "runes": null,
+      "fileId": null,
+      "document": null
+    },
+    {
+      "key": "i:198",
+      "name": "Lost Charm",
+      "quantity": 1,
+      "equipped": false,
+      "invested": true,
+      "container": null,
+      "runes": null,
+      "fileId": 198,
+      "document": null
+    }
+  ],
+  "coins": {
+    "pp": 0,
+    "gp": 15,
+    "sp": 3,
+    "cp": 7,
+    "ep": 0
+  },
+  "hp": {
+    "current": 60,
+    "temp": 3
+  },
+  "heroPoints": 1,
+  "focusPoints": 0,
+  "expected": {
+    "level": 5,
+    "hp": 68,
+    "ac": 19,
+    "perception": 10,
+    "speed": 25,
+    "classDc": 21,
+    "focusMax": 0,
+    "abilities": {
+      "str": 4,
+      "dex": 2,
+      "con": 2,
+      "int": 1,
+      "wis": 1,
+      "cha": 0
+    },
+    "saves": {
+      "fortitude": 11,
+      "reflex": 11,
+      "will": 8
+    },
+    "skills": {
+      "acrobatics": 9,
+      "arcana": 1,
+      "athletics": 13,
+      "crafting": 1,
+      "deception": 0,
+      "diplomacy": 0,
+      "intimidation": 7,
+      "medicine": 1,
+      "nature": 1,
+      "occultism": 8,
+      "performance": 0,
+      "religion": 1,
+      "society": 8,
+      "stealth": 2,
+      "survival": 8,
+      "thievery": 2
+    },
+    "lores": {
+      "warfare-lore": 8,
+      "tavern-lore": 1,
+      "library-lore": 10
+    },
+    "spellcasting": {
+      "Innate Gifts": {
+        "dc": 17,
+        "attack": 7
+      }
+    },
+    "strikes": {
+      "+1 Striking Cinder Blade": {
+        "attack": 14
+      },
+      "Fist": {
+        "attack": 13
+      }
+    }
+  },
+  "notes": [
+    "2 hidden entries were left out.",
+    "1 linked item sheet could not be loaded and was left out."
+  ]
+}
