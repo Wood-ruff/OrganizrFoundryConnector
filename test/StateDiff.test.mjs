@@ -115,3 +115,25 @@ test("switching a pf1 buff on or off changes the effects and needs a push", () =
   assert.deepEqual(switchedOff.effects.removed, [{ kind: "effect", id: "b1", name: "Inspired Courage", slug: null }]);
   assert.equal(hasChanges(switchedOff), true);
 });
+
+function dnd5eEntry(level) {
+  return entry({ actor: {
+    statuses: level > 0 ? ["exhaustion"] : [],
+    conditions: level > 0 ? [{ slug: "exhaustion", name: "Exhaustion", value: level }] : [],
+    effects: level > 0 ? [{ kind: "activeEffect", id: "dnd5eexhaustion0", name: `Exhaustion (${level})`, statuses: ["exhaustion"] }] : []
+  } });
+}
+
+test("a dnd5e exhaustion level change is a changed condition and no effect change", () => {
+  const changes = diffState(stateSnapshot(dnd5eEntry(2)), stateSnapshot(dnd5eEntry(3)));
+  assert.deepEqual(changes.conditions.changed, [{ slug: "exhaustion", name: "Exhaustion", value: 3, previousValue: 2 }]);
+  assert.deepEqual(changes.statuses, { added: [], removed: [] });
+  assert.deepEqual(changes.effects, { added: [], removed: [] });
+});
+
+test("removing dnd5e exhaustion removes the condition, the status and the effect", () => {
+  const changes = diffState(stateSnapshot(dnd5eEntry(2)), stateSnapshot(dnd5eEntry(0)));
+  assert.deepEqual(changes.conditions.removed, [{ slug: "exhaustion", name: "Exhaustion", value: 2 }]);
+  assert.deepEqual(changes.statuses.removed, ["exhaustion"]);
+  assert.deepEqual(changes.effects.removed, [{ kind: "activeEffect", id: "dnd5eexhaustion0", name: "Exhaustion (2)", slug: null, statuses: ["exhaustion"] }]);
+});

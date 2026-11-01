@@ -94,8 +94,46 @@ test("combatants carry turn order, token and the live actor state in both pf2e a
   assert.equal(mara.actor.speed, 30);
   assert.deepEqual(mara.actor.saves, { fortitude: 4, reflex: 6, will: null });
   assert.deepEqual(mara.actor.conditions, []);
-  assert.deepEqual(mara.actor.effects, [{ kind: "activeEffect", id: "ae1", name: "Blessed", img: "x.webp", disabled: false, duration: { rounds: 10 } }]);
+  assert.deepEqual(mara.actor.effects, [{ kind: "activeEffect", id: "ae1", name: "Blessed", img: "x.webp", disabled: false, statuses: [], duration: { rounds: 10 } }]);
   assert.deepEqual(mara.actor.traits, []);
+});
+
+function exhaustedActor(level) {
+  const exhaustion = { id: "dnd5eexhaustion0", name: `Exhaustion (${level})`, img: "e.svg", disabled: false, statuses: new Set(["exhaustion"]), duration: {} };
+  return {
+    id: "A5", uuid: "Actor.A5", type: "character", name: "Tamsin", flags: {},
+    system: { attributes: { hp: { value: 20, max: 24 }, ac: { value: 15 }, exhaustion: level }, details: { level: 4 } },
+    statuses: new Set(level > 0 ? ["exhaustion"] : []),
+    effects: { contents: level > 0 ? [exhaustion] : [] }
+  };
+}
+
+const dnd5eWorld = { ...world, systemId: "dnd5e", systemVersion: "6.0.6" };
+
+test("a dnd5e combatant carries its exhaustion level as a condition and the status ids of its effects", () => {
+  const payload = combatPayload(combatWith([exhaustedActor(2)]), dnd5eWorld, { type: "start", direction: 1 });
+  const actor = payload.combatants[0].actor;
+  assert.deepEqual(actor.statuses, ["exhaustion"]);
+  assert.deepEqual(actor.conditions, [{ slug: "exhaustion", name: "Exhaustion", value: 2 }]);
+  assert.equal(actor.effects[0].id, "dnd5eexhaustion0");
+  assert.deepEqual(actor.effects[0].statuses, ["exhaustion"]);
+});
+
+test("a dnd5e combatant without exhaustion carries no condition", () => {
+  const payload = combatPayload(combatWith([exhaustedActor(0)]), dnd5eWorld, { type: "start", direction: 1 });
+  assert.deepEqual(payload.combatants[0].actor.conditions, []);
+});
+
+test("the exhaustion level only becomes a condition in a dnd5e world", () => {
+  const payload = combatPayload(combatWith([exhaustedActor(2)]), world, { type: "start", direction: 1 });
+  assert.deepEqual(payload.combatants[0].actor.conditions, []);
+});
+
+test("combatantState reads the exhaustion level in the system it is given", () => {
+  const combat = combatWith([exhaustedActor(3)]);
+  const combatant = { ...combat.turns[0], parent: combat };
+  assert.deepEqual(combatantState(combatant, { type: "state", direction: 0 }, "dnd5e").actor.conditions,
+    [{ slug: "exhaustion", name: "Exhaustion", value: 3 }]);
 });
 
 test("a combatant without token or actor and a combat without extras still produce a payload", () => {

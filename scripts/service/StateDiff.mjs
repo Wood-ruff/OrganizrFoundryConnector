@@ -44,8 +44,11 @@ function conditionSnapshot(condition) {
   return { slug: condition.slug ?? null, name: condition.name ?? null, value: condition.value ?? null };
 }
 
+/** An active effect keeps the core status ids it applies, so the server can tell a status's own document apart. */
 function effectSnapshot(effect) {
-  return { kind: effect.kind ?? null, id: effect.id ?? null, name: effect.name ?? null, slug: effect.slug ?? null };
+  const snapshot = { kind: effect.kind ?? null, id: effect.id ?? null, name: effect.name ?? null, slug: effect.slug ?? null };
+  if (effect.statuses) snapshot.statuses = [...effect.statuses];
+  return snapshot;
 }
 
 function conditionKey(condition) {

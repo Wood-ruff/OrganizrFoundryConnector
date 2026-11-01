@@ -60,7 +60,7 @@ function operationFor(command, combatant) {
   if (isDnd5eExhaustionCommand(command, game.system.id)) {
     return exhaustionOperation(command, exhaustionLevelOf(combatant.actor));
   }
-  const state = actorCommandState(combatantState(combatant, { type: "command", direction: 0 }).actor);
+  const state = actorCommandState(combatantState(combatant, { type: "command", direction: 0 }, game.system.id).actor);
   return commandOperation(command, state);
 }
 

@@ -83,14 +83,35 @@ export function holdsContents(kind, data, systemId) {
 }
 
 /**
- * How a container's contents are replaced: `deleteIds` = everything it holds now (source data), `create` = the
- * exported contents placed in the container with this id; unless restoring, contents that come back keep their
- * spent uses.
+ * How a container's contents are replaced: `deleteIds` = everything it holds now (source data) plus the stray
+ * contents of its sheet among the world items, `create` = the exported contents placed in the container with this
+ * id; unless restoring, contents that come back keep their spent uses.
  */
-export function contentsReplacement(containerId, currentContents, contents, { ownerFileId, restoreInventory = false }) {
+export function contentsReplacement(containerId, currentContents, contents, { ownerFileId, restoreInventory = false, worldItems = [] }) {
   const create = contents.map((content) => contentData(content, ownerFileId, containerId));
   if (!restoreInventory) keepDnd5eContentUses(create, currentContents);
-  return { deleteIds: currentContents.map((item) => item._id), create };
+  const deleteIds = currentContents.map((item) => item._id);
+  const strayIds = strayContentIds(ownerFileId, worldItems).filter((id) => !deleteIds.includes(id));
+  return { deleteIds: [...deleteIds, ...strayIds], create };
+}
+
+/**
+ * The world items flagged as contents of this sheet that no existing item holds (`system.container` empty or naming
+ * a missing item), such as a content left half-created when an import stopped midway.
+ */
+export function strayContentIds(ownerFileId, worldItems) {
+  const itemIds = new Set(worldItems.map(itemIdOf));
+  const strays = worldItems.filter((item) => isContentOf(item, ownerFileId) && !itemIds.has(item.system?.container ?? null));
+  return strays.map(itemIdOf);
+}
+
+function isContentOf(item, ownerFileId) {
+  const fileId = item?.flags?.[MODULE_ID]?.content?.fileId;
+  return fileId !== undefined && fileId !== null && String(fileId) === String(ownerFileId);
+}
+
+function itemIdOf(item) {
+  return item.id ?? item._id;
 }
 
 /** File name for a stored portrait, or null when the id is no plain number or the media type is no image we can place. */

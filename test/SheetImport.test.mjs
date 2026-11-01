@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  appliesPortrait, contentsReplacement, documentKind, holdsContents, importErrorKey, isImportable, linkBody, linkedIndex,
+  appliesPortrait, contentsReplacement, documentKind, strayContentIds, holdsContents, importErrorKey, isImportable, linkBody, linkedIndex,
   pickLinked, portraitFileName, sheetFlag, withDocumentUuid, withPortrait, withRequestedFileId
 } from "../scripts/service/SheetImport.mjs";
 
@@ -229,4 +229,39 @@ test("a refresh deletes every current content and creates the exported ones; spe
   const restored = contentsReplacement("satchelFoundry01", current, satchelContents(), { ownerFileId: 77, restoreInventory: true });
   assert.equal(restored.create[0].system.uses.spent, 0);
   assert.deepEqual(contentsReplacement("satchelFoundry01", current, [], { ownerFileId: 77 }).create, []);
+});
+
+function worldItem(id, container, contentFileId) {
+  const flags = contentFileId === null ? {} : { "organizr-foundry-connector": { content: { fileId: contentFileId } } };
+  return { id, name: "Tallow Candle Bundle", flags, system: { container } };
+}
+
+test("a content of the sheet that no existing item holds is a stray; contents held anywhere stay", () => {
+  const worldItems = [
+    worldItem("satchelFoundry01", null, null),
+    worldItem("otherCopy0000001", null, null),
+    worldItem("innerPouch000001", "satchelFoundry01", 77),
+    worldItem("heldCandle000001", "satchelFoundry01", 77),
+    worldItem("nestedGem0000001", "innerPouch000001", 77),
+    worldItem("copyCandle000001", "otherCopy0000001", 77),
+    worldItem("halfMade00000001", null, 77),
+    worldItem("lostParent000001", "deletedSatchel01", 77),
+    worldItem("otherSheet000001", null, 78),
+    worldItem("sameNameUnflaged", null, null)
+  ];
+  assert.deepEqual(strayContentIds(77, worldItems), ["halfMade00000001", "lostParent000001"]);
+  assert.deepEqual(strayContentIds("78", worldItems), ["otherSheet000001"]);
+  assert.deepEqual(strayContentIds(77, []), []);
+});
+
+test("a refresh also deletes the stray contents of the sheet, each once", () => {
+  const current = [{ _id: "heldCandle000001", name: "Tallow Candle Bundle", type: "consumable", system: { container: "satchelFoundry01" } }];
+  const worldItems = [
+    worldItem("satchelFoundry01", null, null),
+    worldItem("heldCandle000001", "satchelFoundry01", 77),
+    worldItem("halfMade00000001", null, 77)
+  ];
+  const plan = contentsReplacement("satchelFoundry01", current, satchelContents(), { ownerFileId: 77, worldItems });
+  assert.deepEqual(plan.deleteIds, ["heldCandle000001", "halfMade00000001"]);
+  assert.deepEqual(contentsReplacement("satchelFoundry01", current, [], { ownerFileId: 77 }).deleteIds, ["heldCandle000001"]);
 });

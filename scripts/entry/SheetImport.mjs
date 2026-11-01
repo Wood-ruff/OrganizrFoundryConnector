@@ -108,12 +108,14 @@ async function createDocument(kind, document, systemId, placement = {}) {
 }
 
 /**
- * Deletes everything the container holds now and creates the exported contents in it (in the container's folder);
- * unless restoring, contents that come back keep their spent uses. A content that fails is a warning only.
+ * Deletes everything the container holds now and the stray contents of its sheet, then creates the exported contents
+ * in it (in the container's folder); unless restoring, contents that come back keep their spent uses. A content that
+ * fails is a warning only.
  */
 async function replaceContents(container, contents, { fileId, restoreInventory, systemId, warnings }) {
   const currentContents = (await containedItems(container)).map((item) => item.toObject());
-  const plan = contentsReplacement(container.id, currentContents, contents, { ownerFileId: fileId, restoreInventory });
+  const worldItems = game.items.contents;
+  const plan = contentsReplacement(container.id, currentContents, contents, { ownerFileId: fileId, restoreInventory, worldItems });
   if (plan.deleteIds.length) await CONFIG.Item.documentClass.deleteDocuments(plan.deleteIds);
   let failed = 0;
   for (const data of plan.create) {

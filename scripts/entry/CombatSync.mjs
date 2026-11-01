@@ -96,7 +96,7 @@ function rememberBaselines(entries) {
 
 async function sendState(combat, combatant) {
   if (!combat.combatants.has(combatant.id)) return;
-  const entry = combatantState(combatant, { type: "state", direction: 0 });
+  const entry = combatantState(combatant, { type: "state", direction: 0 }, game.system.id);
   const snapshot = stateSnapshot(entry);
   const changes = diffState(baselines.get(combatant.id), snapshot);
   if (!hasChanges(changes)) return;

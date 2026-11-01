@@ -1,5 +1,8 @@
 import { jsonSafe } from "./CombatantSnapshot.mjs";
 import { knownFileId } from "./CharacterSync.mjs";
+import { exhaustionLevelOf } from "./CombatCommands.mjs";
+
+const DND5E_SYSTEM_ID = "dnd5e";
 
 /**
  * Everything Organizr needs about a running combat as plain JSON: the world, the combat state,
@@ -12,7 +15,7 @@ export function combatPayload(combat, world, event) {
     event: { ...event, at: new Date().toISOString() },
     world,
     combat: combatEntry(combat, current),
-    combatants: turns.map((combatant, index) => combatantEntry(combatant, index, current)),
+    combatants: turns.map((combatant, index) => combatantEntry(combatant, index, current, world?.systemId)),
     groups: groupEntries(combat)
   };
 }
@@ -32,11 +35,11 @@ function sameCombatant(from, to) {
   return from.combatantId !== null && from.combatantId === to.combatantId;
 }
 
-/** One combatant as the start payload lists it; also the body of a combatant state sync. */
-export function combatantState(combatant, event) {
+/** One combatant as the start payload lists it in the world's system; also the body of a combatant state sync. */
+export function combatantState(combatant, event, systemId) {
   const current = combatant.parent?.combatant ?? combatant.combat?.combatant ?? null;
   const index = (combatant.parent?.turns ?? []).findIndex((turn) => turn.id === combatant.id);
-  return { event: { ...event, at: new Date().toISOString() }, ...combatantEntry(combatant, index, current) };
+  return { event: { ...event, at: new Date().toISOString() }, ...combatantEntry(combatant, index, current, systemId) };
 }
 
 const MOVE_ACTIONS = { "round:1": "next-round", "round:-1": "previous-round", "turn:1": "next-turn", "turn:-1": "previous-turn" };
@@ -105,7 +108,7 @@ function idsOf(documents) {
   return (documents ?? []).map((document) => document?.id ?? null);
 }
 
-function combatantEntry(combatant, index, current) {
+function combatantEntry(combatant, index, current, systemId) {
   return {
     id: combatant.id,
     name: combatant.name ?? null,
@@ -120,7 +123,7 @@ function combatantEntry(combatant, index, current) {
     groupId: groupIdOf(combatant.group),
     players: (combatant.players ?? []).map((user) => user.name),
     token: tokenEntry(combatant.token ?? null),
-    actor: actorEntry(combatant.actor ?? null)
+    actor: actorEntry(combatant.actor ?? null, systemId)
   };
 }
 
@@ -146,7 +149,7 @@ function tokenEntry(token) {
   };
 }
 
-function actorEntry(actor) {
+function actorEntry(actor, systemId) {
   if (!actor) return null;
   const system = actor.system ?? {};
   return {
@@ -164,7 +167,7 @@ function actorEntry(actor) {
     speed: speedOf(system),
     saves: savesOf(actor, system),
     statuses: listOf(actor.statuses),
-    conditions: conditionsOf(actor),
+    conditions: conditionsOf(actor, systemId),
     effects: effectsOf(actor),
     traits: listOf(actor.traits)
   };
@@ -238,13 +241,22 @@ function hpOf(actor, system) {
   };
 }
 
-function conditionsOf(actor) {
+/** pf2e conditions with their values; in dnd5e the exhaustion level, the one valued status. */
+function conditionsOf(actor, systemId) {
+  if (systemId === DND5E_SYSTEM_ID) return dnd5eConditionsOf(actor);
   const conditions = listOf(actor.conditions?.active ?? actor.itemTypes?.condition);
   return conditions.map((condition) => ({
     slug: condition.slug ?? null,
     name: condition.name ?? null,
     value: condition.value ?? null
   }));
+}
+
+/** dnd5e exhaustion as a condition with its prepared level (`attributes.exhaustion`), none at level 0. */
+function dnd5eConditionsOf(actor) {
+  const level = exhaustionLevelOf(actor);
+  if (level === 0) return [];
+  return [{ slug: "exhaustion", name: "Exhaustion", value: level }];
 }
 
 function effectsOf(actor) {
@@ -280,6 +292,7 @@ function activeEffectsOf(actor) {
     name: effect.name ?? null,
     img: effect.img ?? null,
     disabled: Boolean(effect.disabled),
+    statuses: listOf(effect.statuses),
     duration: jsonSafe(effect.duration?.toObject?.() ?? effect.duration ?? null)
   }));
 }
