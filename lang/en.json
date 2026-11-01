@@ -107,6 +107,8 @@
         "RecipeVersion": "{name}: Organizr sent a build recipe this connector cannot read. Update the Organizr connector module.",
         "NoClass": "{name}: pf2e's compendium has no single class named \"{className}\", so no actor was created.",
         "Failed": "{name}: the build failed, so nothing was created or changed ({message}).",
+        "FailedKept": "{name}: the build failed ({message}) and the half-built actor could not be removed. Delete it by hand before importing the character again.",
+        "NotCreated": "{name}: Foundry did not create the actor (a module or world script stopped it), so nothing was created.",
         "RefreshFailed": "{name} is only partly rebuilt ({message}). What was rebuilt stays and the build report lists it; import it again to refresh it fully."
       },
       "Card": {
@@ -180,11 +182,14 @@
         "BatchCharacters": "Refreshed characters take Organizr's items and XP; send a character to Organizr first to keep changes made in Foundry."
       },
       "Pf2e": {
-        "CharacterBody": "Rebuilds the character from Organizr with pf2e's compendium items: ancestry, background, class, feats, actions, lores, spells and gear are replaced, and the level, XP, attributes, skills, languages, biography, equipped and invested states and prepared spells come from Organizr. Keeps the token, current HP (up to the new maximum), temporary HP, hero points, spent focus points and spell slots, expended preparations, innate spell uses, item quantities, charges and damage, coins, the choices made in Foundry's prompts, conditions, effects and the items added in Foundry.",
-        "RestoreInventory": "Also restore item quantities, charges, damage and coins from Organizr",
-        "BatchCharacters": "Refreshed pf2e characters are rebuilt from Organizr and keep their current HP, hero points, spent focus points and spell slots, item quantities, coins, conditions, effects and the items added in Foundry.",
+        "ActorBody": "Replaces stats, strikes, abilities and spells. Keeps the token (image, name, disposition), current HP (up to the new maximum), temporary HP, spent focus points, spell slots, conditions and effects.",
+        "CharacterBody": "Rebuilds the character from Organizr with pf2e's compendium items: ancestry, background, class, feats, actions, lores, spells and gear are replaced, and the level, XP, attributes, skills, languages, biography, equipped and invested states and prepared spells come from Organizr. Keeps the token, current HP (up to the new maximum), temporary HP, hero points, spent focus points and spell slots, expended preparations, innate spell uses, item quantities, charges and damage, coins, the choices made in Foundry's prompts, conditions, effects and the items added in Foundry. Gear used up or given away in Foundry does not come back unless you tick the box below.",
+        "UnbuiltCharacterBody": "This character was not built by the connector, so every item except conditions, effects and coins is replaced with Organizr's, including the items added in Foundry; send the character to Organizr first to keep them. The ancestry, background, class, feats, actions, lores, spells and gear come from pf2e's compendium, the level, XP, attributes, skills, languages and biography from Organizr. Keeps the token, current HP (up to the new maximum), temporary HP, hero points, spent focus points and the coins; quantities, charges and damage are kept for items whose name is unique on both sides, spell slots and expended preparations for entries and spells of the same name.",
+        "RestoreInventory": "Also restore item quantities, charges, damage, used-up gear and coins from Organizr",
+        "BatchCharacters": "Refreshed pf2e characters are rebuilt from Organizr and keep their current HP, hero points, spent focus points and spell slots, item quantities, coins, conditions, effects and the items added in Foundry; gear used up in Foundry does not come back.",
+        "BatchUnbuilt": "Not built by the connector ({count} of these characters): every item except conditions, effects and coins is replaced with Organizr's, including the items added in Foundry.",
         "BatchKeeps": "Refreshed actors keep their token (image, name, disposition), current HP (up to the new maximum), temporary HP, spent focus points, spell slots, conditions and effects; refreshed items are replaced.",
-        "BatchRestoreCharacters": "Also restore the rebuilt characters' item quantities, charges, damage and coins from Organizr"
+        "BatchRestoreCharacters": "Also restore the rebuilt characters' item quantities, charges, damage, used-up gear and coins from Organizr"
       }
     },
     "Send": {

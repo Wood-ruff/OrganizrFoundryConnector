@@ -3,6 +3,7 @@
     <p>{{localize "ORGANIZR.Refresh.BatchCounts" create=batch.create refresh=batch.refresh}}</p>
     {{#if batch.refresh}}<p class="organizr-hint">{{localize batch.keepsKey}}</p>{{/if}}
     {{#if batch.characters}}<p class="organizr-hint">{{localize batch.charactersKey}}</p>{{/if}}
+    {{#if batch.unbuilt}}<p>{{localize batch.unbuiltKey count=batch.unbuilt}}</p>{{/if}}
     {{#if batch.skipped}}<p>{{localize batch.skippedKey count=batch.skipped}}</p>{{/if}}
   {{else}}
     <p>{{localize bodyKey}}</p>

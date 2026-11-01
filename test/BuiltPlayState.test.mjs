@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  actorStateUpdate, containerRestores, entrySlotUpdates, isBuiltActor, itemStateUpdates, keptRootId, rootIdsToDelete,
-  snapshotPlayState, spellUseUpdates
+  actorStateUpdate, containerRestores, entrySlotUpdates, isUsedUp, itemStateUpdates, keptRootId, playStateItemUpdates,
+  rootContainerRestores, snapshotPlayState, spellUseUpdates
 } from "../scripts/service/BuiltPlayState.mjs";
+import { isBuiltActor, rootIdsToDelete } from "../scripts/service/BuiltRoots.mjs";
 
 const MODULE = "organizr-foundry-connector";
 const SKILL_SOURCE = "Compendium.pf2e.feats-srd.Item.skillpick0000001";
@@ -105,7 +106,8 @@ function pushedActor() {
       }),
       item("oldember00000001", "spell", "Ember Lance", { location: { value: "oldentry00000001" } }),
       item("dying00000000001", "condition", "Dying", { value: { value: 1 } }),
-      item("effect0000000001", "effect", "Blessed Ward", {})
+      item("effect0000000001", "effect", "Blessed Ward", {}),
+      item("affliction000001", "affliction", "Marsh Venom", {})
     ]
   };
 }
@@ -118,9 +120,13 @@ test("a snapshot keeps the actor's HP, temp HP, hero points and focus points", (
 
 test("a snapshot keeps each root's id and the quantity, uses and HP of physical items only", () => {
   const snapshot = snapshotPlayState(builtActor());
-  assert.deepEqual(snapshot.roots.get("i:61"), { id: "potion0000000001", quantity: 2, uses: 0, hp: 1 });
-  assert.deepEqual(snapshot.roots.get("i:62"), { id: "shield0000000001", quantity: 1, uses: undefined, hp: 3 });
-  assert.deepEqual(snapshot.roots.get("c:gp"), { id: "goldcoins0000001", quantity: 9, uses: undefined, hp: undefined });
+  assert.deepEqual(snapshot.roots.get("i:61"), {
+    id: "potion0000000001", quantity: 2, uses: 0, hp: 1, containerId: "backpack00000001"
+  });
+  assert.deepEqual(snapshot.roots.get("i:62"), { id: "shield0000000001", quantity: 1, uses: undefined, hp: 3, containerId: null });
+  assert.deepEqual(snapshot.roots.get("c:gp"), {
+    id: "goldcoins0000001", quantity: 9, uses: undefined, hp: undefined, containerId: null
+  });
   assert.deepEqual(snapshot.roots.get("id:class"), { id: "class00000000001" });
   assert.deepEqual(snapshot.roots.get("id:ancestry"), { id: "ancestry00000001" });
   assert.equal(keptRootId(snapshot, "f:12"), "featslotted00001");
@@ -187,9 +193,10 @@ test("a kept item inside a deleted container is put back once the container is r
   assert.deepEqual(containerRestores(snapshot, ["backpack00000001", "foundryonlyitem1"]),
     [{ _id: "foundryonlyitem1", "system.containerId": "backpack00000001" }]);
   assert.deepEqual(containerRestores(snapshot, ["foundryonlyitem1"]), []);
+  assert.deepEqual(containerRestores(snapshot, ["backpack00000001"]), []);
 });
 
-test("an actor the connector did not build loses every item except conditions and effects", () => {
+test("an actor the connector did not build loses every item except conditions, effects and afflictions", () => {
   assert.equal(isBuiltActor(pushedActor()), false);
   assert.deepEqual(rootIdsToDelete(pushedActor()), [
     "oldclass00000001", "oldtonic00000001", "oldarrows0000001", "oldarrows0000002", "oldgold000000001",
@@ -325,4 +332,99 @@ test("a snapshot of an empty or odd source gives empty state and no deletes", ()
   assert.deepEqual(rootIdsToDelete({ items: [null, "x"] }), []);
   assert.deepEqual(itemStateUpdates(snapshot, null), []);
   assert.deepEqual(entrySlotUpdates(snapshot, undefined), []);
+});
+
+test("gear the build made before and that is gone now counts as used up; kept or never-built gear does not", () => {
+  const actor = builtActor();
+  actor.flags[MODULE].build.gearKeys = ["i:60", "i:61", "i:63"];
+  const snapshot = snapshotPlayState(actor);
+  assert.deepEqual(snapshot.gearKeys, ["i:60", "i:61", "i:63"]);
+  assert.equal(isUsedUp(snapshot, "i:63"), true);
+  assert.equal(isUsedUp(snapshot, "i:61"), false);
+  assert.equal(isUsedUp(snapshot, "i:64"), false);
+  assert.equal(isUsedUp(snapshotPlayState(builtActor()), "i:63"), false);
+  assert.equal(isUsedUp(null, "i:63"), false);
+});
+
+test("a root the player put into a Foundry container goes back there when the recipe leaves it loose", () => {
+  const actor = builtActor();
+  actor.items.push(item("foundrysack00001", "backpack", "Market Sack", { quantity: 1 }));
+  actor.items.find((candidate) => candidate._id === "shield0000000001").system.containerId = "foundrysack00001";
+  const snapshot = snapshotPlayState(actor);
+  const shield = (containerId) => builtItem("shield0000000001", "shield", "Oak Buckler", "i:62", { quantity: 1, containerId });
+  const potion = builtItem("potion0000000001", "consumable", "Mint Tonic", "i:61", { quantity: 2, containerId: null });
+  const sack = item("foundrysack00001", "backpack", "Market Sack", { quantity: 1 });
+  const backpack = builtItem("backpack00000001", "backpack", "Patched Satchel", "i:60", { quantity: 1 });
+  assert.deepEqual(rootContainerRestores(snapshot, [shield(null), potion, sack, backpack]), [
+    { _id: "shield0000000001", "system.containerId": "foundrysack00001" }
+  ]);
+  assert.deepEqual(rootContainerRestores(snapshot, [shield("backpack00000001"), sack, backpack]), []);
+  assert.deepEqual(rootContainerRestores(snapshot, [shield(null), backpack]), []);
+});
+
+test("the restore updates are one per item and leave out kept item values when the inventory is restored", () => {
+  const actor = builtActor();
+  actor.items.push(item("foundrysack00001", "backpack", "Market Sack", { quantity: 1 }));
+  actor.items.find((candidate) => candidate._id === "shield0000000001").system.containerId = "foundrysack00001";
+  const snapshot = snapshotPlayState(actor);
+  const sources = [
+    builtItem("shield0000000001", "shield", "Oak Buckler", "i:62", { quantity: 1, hp: { value: 6, max: 6 }, containerId: null }),
+    item("foundrysack00001", "backpack", "Market Sack", { quantity: 1 }),
+    builtItem("backpack00000001", "backpack", "Patched Satchel", "i:60", { quantity: 1 }),
+    item("foundryonlyitem1", "equipment", "Lucky Pebble", { quantity: 1 })
+  ];
+  assert.deepEqual(playStateItemUpdates(snapshot, sources, false), [
+    { _id: "foundryonlyitem1", "system.containerId": "backpack00000001" },
+    { _id: "shield0000000001", "system.containerId": "foundrysack00001", "system.hp.value": 3 }
+  ]);
+  assert.deepEqual(playStateItemUpdates(snapshot, sources, true), [
+    { _id: "foundryonlyitem1", "system.containerId": "backpack00000001" },
+    { _id: "shield0000000001", "system.containerId": "foundrysack00001" }
+  ]);
+});
+
+test("a coin kept inside a deleted container is put back there; with Organizr's coins it is deleted", () => {
+  const actor = builtActor();
+  actor.items.push(item("pouchsilver00001", "treasure", "Silver Pieces", { category: "coin", quantity: 4, containerId: "backpack00000001" }));
+  assert.deepEqual(snapshotPlayState(actor, { keepCoins: true }).containers, [
+    { id: "foundryonlyitem1", containerId: "backpack00000001" }, { id: "pouchsilver00001", containerId: "backpack00000001" }
+  ]);
+  assert.deepEqual(snapshotPlayState(actor, { keepCoins: false }).containers, [
+    { id: "foundryonlyitem1", containerId: "backpack00000001" }
+  ]);
+});
+
+test("a split-off or traded-in item with a root's key keeps its own values and place; only the recreated root takes them", () => {
+  const actor = builtActor();
+  const split = builtItem("potion0000000002", "consumable", "Mint Tonic", "i:61", { quantity: 1, uses: { value: 1, max: 1 } });
+  const traded = builtItem("tradedshield0001", "shield", "Oak Buckler", "i:62", { quantity: 1, hp: { value: 6, max: 6 } });
+  traded.flags[MODULE].build.owner = "otherbuild000001";
+  actor.items.push(split, traded);
+  const snapshot = snapshotPlayState(actor);
+  assert.equal(snapshot.roots.get("i:61").id, "potion0000000001");
+  const sources = [
+    builtItem("potion0000000001", "consumable", "Mint Tonic", "i:61", { quantity: 1, uses: { value: 1, max: 1 }, containerId: null }),
+    structuredClone(split),
+    structuredClone(traded),
+    builtItem("shield0000000001", "shield", "Oak Buckler", "i:62", { quantity: 1, hp: { value: 6, max: 6 } })
+  ];
+  assert.deepEqual(itemStateUpdates(snapshot, sources), [
+    { _id: "potion0000000001", "system.quantity": 2, "system.uses.value": 0 },
+    { _id: "shield0000000001", "system.hp.value": 3 }
+  ]);
+});
+
+test("a duplicated spell with a root's key neither gives nor takes the root's innate uses", () => {
+  const actor = builtActor();
+  actor.items.push(builtItem("spellglow000002", "spell", "Glow Mote", "e:tallfolk-innate-spells/s:n:glow-mote", {
+    location: { value: "entryinnate00001", uses: { value: 3, max: 3 } }
+  }));
+  const snapshot = snapshotPlayState(actor);
+  assert.equal(snapshot.spellUses.get("key:e:tallfolk-innate-spells/s:n:glow-mote"), 1);
+  const glow = (id) => builtItem(id, "spell", "Glow Mote", "e:tallfolk-innate-spells/s:n:glow-mote", {
+    location: { value: "entryinnate00001", uses: { value: 3, max: 3 } }
+  });
+  assert.deepEqual(spellUseUpdates(snapshot, [glow("spellglow000001"), glow("spellglow000002")]), [
+    { _id: "spellglow000001", "system.location.uses.value": 1 }
+  ]);
 });

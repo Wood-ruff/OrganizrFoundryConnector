@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  RECIPE_FORMAT, RECIPE_VERSION, baseName, markCovered, recipeErrorKey, recipeEvidence
+  RECIPE_FORMAT, RECIPE_VERSION, baseName, markCovered, markWriting, recipeErrorKey, recipeEvidence
 } from "../scripts/service/Pf2eRecipe.mjs";
 import { sluggify } from "./support/sluggify.mjs";
 
@@ -104,4 +104,15 @@ test("covered names leave the uncovered slugs, a suffixed one with its base", ()
   assert.ok(!evidence.uncovered.has("scholar-occultism"));
   assert.ok(!evidence.uncovered.has("scholar"));
   assert.ok(evidence.names.has("toughness"));
+});
+
+test("evidence starts with no entry being written and markWriting names one or clears it", () => {
+  const evidence = recipeEvidence({}, sluggify);
+  assert.equal(evidence.writing, null);
+  markWriting(evidence, "Steady Craft (Medicine)");
+  assert.equal(evidence.writing, "Steady Craft (Medicine)");
+  markWriting(evidence, null);
+  assert.equal(evidence.writing, null);
+  markWriting(evidence, 7);
+  assert.equal(evidence.writing, null);
 });

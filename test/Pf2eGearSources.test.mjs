@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { carryState, coinEntries, gearPlan, placedGearSource } from "../scripts/service/Pf2eGearSources.mjs";
+import { carryState, coinEntries, gearKeysOf, gearPlan, placedGearSource } from "../scripts/service/Pf2eGearSources.mjs";
 
 function gear(type, usage, extra = {}) {
   return { name: `Test ${type}`, type, system: { usage: { value: usage }, quantity: 1,
@@ -100,4 +100,12 @@ test("coins become one item per currency and electrum is kept for the report", (
   });
   assert.deepEqual(coinEntries({ pp: 2 }).entries, [{ key: "c:pp", slug: "platinum-pieces", quantity: 2 }]);
   assert.deepEqual(coinEntries(null), { entries: [], electrum: 0 });
+});
+
+test("the gear keys a build creates are every entry with a source, containers first, never coins", () => {
+  const inventory = [entry({ key: "i:1" }), entry({ key: "i:2", container: "i:3" }), entry({ key: "i:3" }), entry({ key: "i:4" })];
+  const sources = new Map([["i:1", gear("equipment", "worn")], ["i:2", gear("consumable", "held-in-one-hand")],
+    ["i:3", gear("backpack", "worn")], ["c:gp", gear("treasure", "")]]);
+  assert.deepEqual(gearKeysOf(inventory, sources), ["i:3", "i:1", "i:2"]);
+  assert.deepEqual(gearKeysOf(undefined, sources), []);
 });

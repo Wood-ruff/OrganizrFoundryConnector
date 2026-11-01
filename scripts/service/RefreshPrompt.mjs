@@ -1,16 +1,21 @@
+import { isBuiltActor } from "./BuiltRoots.mjs";
+
 const DND5E_SYSTEM_ID = "dnd5e";
 const PF2E_SYSTEM_ID = "pf2e";
 const CHARACTER_TYPE = "character";
+const NPC_TYPE = "npc";
 const BODY_KEYS = new Map([["loot", "LootBody"], ["npc", "ActorBody"], ["character", "CharacterBody"]]);
 const ITEM_BODY_KEY = "ORGANIZR.Refresh.ItemBody";
 
 /**
  * What the confirm dialog of a single refresh says: body and restore texts by sheet kind and world system (dnd5e has
- * its own, a pf2e character is rebuilt from its recipe), the restore box for loot and pf2e characters.
+ * its own, a pf2e NPC its own, a pf2e character is rebuilt from its recipe and warned when the connector did not build
+ * the linked actor, `built` false), the restore box for loot and pf2e characters.
  */
-export function refreshPrompt(name, sheetType, systemId = "") {
+export function refreshPrompt(name, sheetType, systemId = "", built = true) {
   if (rebuildsPf2eCharacter(sheetType, systemId)) {
-    return { name, bodyKey: pf2eKey("CharacterBody"), restoreKey: pf2eKey("RestoreInventory"), showRestore: true };
+    const bodyKey = pf2eKey(built ? "CharacterBody" : "UnbuiltCharacterBody");
+    return { name, bodyKey, restoreKey: pf2eKey("RestoreInventory"), showRestore: true };
   }
   return {
     name,
@@ -29,6 +34,7 @@ function pf2eKey(name) {
 }
 
 function refreshBodyKey(sheetType, systemId) {
+  if (sheetType === NPC_TYPE && systemId === PF2E_SYSTEM_ID) return pf2eKey("ActorBody");
   const bodyKey = BODY_KEYS.get(sheetType);
   if (!bodyKey) return ITEM_BODY_KEY;
   return refreshKey(bodyKey, systemId);
@@ -47,10 +53,11 @@ export function needsBatchConfirm(plan) {
 
 /**
  * The counts and texts the batch confirm dialog shows, including the refreshed characters (they take Organizr's
- * items; in a pf2e world they are rebuilt and keep their play state, with their own keeps text and restore box); the
- * loot restore box only when linked loot would be skipped.
+ * items; in a pf2e world they are rebuilt and keep their play state, with their own keeps text and restore box, and
+ * `unbuilt` of them, linked actors the connector did not build, get a warning); the loot restore box only when linked
+ * loot would be skipped.
  */
-export function batchPrompt(plan, systemId = "") {
+export function batchPrompt(plan, systemId = "", unbuilt = 0) {
   const rebuilt = rebuiltCharacterCount(plan, systemId);
   return {
     create: plan.create.length,
@@ -63,8 +70,24 @@ export function batchPrompt(plan, systemId = "") {
     charactersKey: batchCharactersKey(systemId),
     skippedKey: refreshKey("BatchSkipped", systemId),
     restoreKey: refreshKey("BatchRestore", systemId),
-    characterRestoreKey: pf2eKey("BatchRestoreCharacters")
+    characterRestoreKey: pf2eKey("BatchRestoreCharacters"),
+    unbuilt: rebuilt > 0 ? Math.min(unbuilt, rebuilt) : 0,
+    unbuiltKey: pf2eKey("BatchUnbuilt")
   };
+}
+
+/**
+ * How many pf2e characters of the batch would be rebuilt over a linked actor the connector did not build;
+ * `linkedActorOf(sheet)` gives the actor a sheet refreshes, or null.
+ */
+export function unbuiltRebuildCount(plan, systemId, linkedActorOf) {
+  if (systemId !== PF2E_SYSTEM_ID) return 0;
+  const rebuilt = plan.refresh.filter((sheet) => sheet.buildsFromRecipe === true);
+  return rebuilt.filter((sheet) => isUnbuiltActor(linkedActorOf(sheet))).length;
+}
+
+function isUnbuiltActor(actor) {
+  return Boolean(actor) && !isBuiltActor(actor);
 }
 
 /**

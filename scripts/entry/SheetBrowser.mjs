@@ -1,13 +1,18 @@
 import { batchPlan, filterSheets, groupSheets, importableSheets, listErrorKey } from "../service/SheetCatalog.mjs";
-import { batchImportOptions, batchRestore, needsBatchConfirm } from "../service/RefreshPrompt.mjs";
+import {
+  batchImportOptions, batchRestore, needsBatchConfirm, unbuiltRebuildCount
+} from "../service/RefreshPrompt.mjs";
+import { isBuiltActor } from "../service/BuiltRoots.mjs";
 import { buildsFromRecipe, importErrorKey } from "../service/SheetImport.mjs";
 import { createImageCache } from "../service/ImageCache.mjs";
 import { readWorldLink } from "../config/ModuleSettings.mjs";
 import { worldInfo } from "../config/WorldInfo.mjs";
 import { createOrganizrClient } from "../client/OrganizrClient.mjs";
 import { importSheet, linkedWorldDocuments } from "./SheetImport.mjs";
+import { linkedCopy } from "./ImportSteps.mjs";
 import { importCharacterBuild } from "./CharacterBuild.mjs";
 import { notifyBuild, postBuildReport } from "./BuildReport.mjs";
+import { notifyBuildError } from "./BuildErrors.mjs";
 import { confirmBatch, confirmRefresh } from "./RefreshConfirm.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -179,10 +184,10 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     ui.notifications.info(key, { localize: true, format: { name: outcome.name } });
   }
 
-  /** A build error carries its own localized text; other failures are named by their HTTP status. */
+  /** A build error names its own notice; other failures are named by their HTTP status. */
   #showImportError(error) {
     if (error.buildKey) {
-      ui.notifications.error(error.message);
+      notifyBuildError(error);
       return;
     }
     ui.notifications.error(importErrorKey(error.status ?? -1), { localize: true, format: { message: error.message } });
@@ -269,7 +274,8 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     let restoreInventory = false;
     if (linkedWorldDocuments().has(fileId)) {
       const systemId = worldInfo().systemId;
-      const answer = await this.#askFirst(() => confirmRefresh(entry?.name ?? `#${fileId}`, entry?.type, systemId));
+      const built = refreshesBuiltActor(fileId, entry?.uuid);
+      const answer = await this.#askFirst(() => confirmRefresh(entry?.name ?? `#${fileId}`, entry?.type, systemId, built));
       if (!answer) return;
       restoreInventory = answer.restoreInventory;
     }
@@ -288,13 +294,25 @@ export class SheetBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     let plan = batchPlan(sheets, linked, false);
     let restore = batchRestore(null, plan);
     if (needsBatchConfirm(plan)) {
-      const answer = await this.#askFirst(() => confirmBatch(plan, systemId));
+      const unbuilt = unbuiltRebuildCount(plan, systemId, (sheet) => linkedActorOf(sheet.fileId, sheet.uuid));
+      const answer = await this.#askFirst(() => confirmBatch(plan, systemId, unbuilt));
       if (!answer) return;
       restore = batchRestore(answer, plan);
       if (restore.inventory) plan = batchPlan(sheets, linked, true);
     }
     this.#importMany(plan, restore);
   }
+}
+
+/** The world actor an import of this sheet refreshes, or null. */
+function linkedActorOf(fileId, recordedUuid) {
+  return linkedCopy(String(fileId), "Actor", recordedUuid ?? null).target;
+}
+
+/** False only when the sheet refreshes a linked actor the connector did not build. */
+function refreshesBuiltActor(fileId, recordedUuid) {
+  const actor = linkedActorOf(fileId, recordedUuid);
+  return !actor || isBuiltActor(actor);
 }
 
 /** Builds a pf2e character from its recipe, imports every other sheet as a Foundry document. */

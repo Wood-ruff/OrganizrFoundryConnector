@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildKeyOf, compendiumSource, customSource, loreSources, slottedFeat, withBuildFlag
+  buildKeyOf, buildOwnerOf, compendiumSource, customSource, loreSources, slottedFeat, withBuildFlag, withBuildOwner
 } from "../scripts/service/Pf2eItemSources.mjs";
 import { sluggify } from "./support/sluggify.mjs";
 
@@ -95,4 +95,17 @@ test("lores without a sluggify still match by a plain slug", () => {
   assert.deepEqual(create, []);
   assert.deepEqual(updates, [{ _id: "m1", "system.proficient.value": 3 }]);
   assert.deepEqual(loreSources(null, null), { create: [], updates: [] });
+});
+
+test("a source with a build key gets the build that creates it as owner; other sources are copied as they are", () => {
+  const keyed = withBuildFlag({ name: "Silk Rope", type: "equipment", flags: { pf2e: { note: "kept" } } }, { key: "i:5" });
+  const owned = withBuildOwner(keyed, "ownbuild00000001");
+  assert.deepEqual(owned.flags, { pf2e: { note: "kept" }, [MODULE]: { build: { key: "i:5", owner: "ownbuild00000001" } } });
+  assert.equal(buildOwnerOf(owned), "ownbuild00000001");
+  assert.equal(buildOwnerOf(keyed), null);
+  assert.equal(keyed.flags[MODULE].build.owner, undefined);
+  const plain = { name: "Lucky Pebble", type: "equipment" };
+  assert.deepEqual(withBuildOwner(plain, "ownbuild00000001"), plain);
+  assert.notEqual(withBuildOwner(plain, "ownbuild00000001"), plain);
+  assert.deepEqual(withBuildOwner(keyed, undefined), keyed);
 });

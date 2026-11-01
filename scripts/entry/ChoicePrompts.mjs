@@ -4,14 +4,15 @@ const PROMPT_HOOK = "renderPickAThingPrompt";
 const FALLBACK_HOOK = "renderApplicationV2";
 
 /**
- * Runs `fn` while every pf2e choice prompt that opens is answered from the recipe evidence and closed at once; each
- * prompt is recorded in `outcome.prompts` as `{item, choice, how}` (`choice` = the picked label, null when none).
+ * Runs `fn` while every pf2e choice prompt of an item on `actor` is answered from the recipe evidence and closed at
+ * once (prompts of other actors stay open for the user); each is recorded in `outcome.prompts` as `{item, choice, how}`
+ * (`choice` = the picked label, null when none).
  */
-export async function withChoicePrompts(evidence, outcome, fn) {
+export async function withChoicePrompts(actor, { evidence, outcome }, fn) {
   const prompts = recordedPrompts(outcome);
   const seen = new WeakSet();
   const onRender = (app) => {
-    if (!isChoicePrompt(app) || seen.has(app)) return;
+    if (!isChoicePrompt(app) || !isPromptFor(app, actor) || seen.has(app)) return;
     seen.add(app);
     prompts.push(answerPrompt(app, evidence));
   };
@@ -26,6 +27,14 @@ export async function withChoicePrompts(evidence, outcome, fn) {
 /** Whether a rendered application is a pf2e pick-a-thing prompt (choices plus a selection to fill). */
 export function isChoicePrompt(app) {
   return Array.isArray(app?.choices) && "selection" in app;
+}
+
+/** Whether the prompt belongs to an item of this actor (the same document, or one with the same uuid). */
+export function isPromptFor(app, actor) {
+  const owner = app?.item?.actor;
+  if (!owner || !actor) return false;
+  if (owner === actor) return true;
+  return typeof owner.uuid === "string" && owner.uuid === actor.uuid;
 }
 
 /** What the choice answers read of a prompt: the item it belongs to and its choices with localized labels. */

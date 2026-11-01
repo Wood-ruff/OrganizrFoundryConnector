@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isChoicePrompt, promptView, withChoicePrompts } from "../scripts/entry/ChoicePrompts.mjs";
+import { isChoicePrompt, isPromptFor, promptView, withChoicePrompts } from "../scripts/entry/ChoicePrompts.mjs";
 import { sluggify } from "./support/sluggify.mjs";
 
 function fakeHooks() {
@@ -36,9 +36,12 @@ function installFoundry() {
   return hooks;
 }
 
-function fakePrompt(itemName, choices, sourceId = null) {
+const BUILT = { uuid: "Actor.builtactor000001", name: "[test] Built" };
+const OTHER = { uuid: "Actor.otheractor000001", name: "[test] Other" };
+
+function fakePrompt(itemName, choices, sourceId = null, actor = BUILT) {
   return {
-    item: { name: itemName, sourceId },
+    item: { name: itemName, sourceId, actor },
     choices,
     selection: null,
     closed: 0,
@@ -66,7 +69,7 @@ test("a prompt that opens while the build runs is answered from the evidence, cl
   const prompt = fakePrompt("Weapon Drill (Blade)", [{ value: "axe", label: "Axe" }, { value: "blade", label: "LANG.Blade" }]);
   const facts = evidence({ suffixes: new Map([["weapon-drill", new Set(["blade"])]]) });
 
-  const result = await withChoicePrompts(facts, outcome, async () => {
+  const result = await withChoicePrompts(BUILT, { evidence: facts, outcome }, async () => {
     hooks.callAll("renderPickAThingPrompt", prompt);
     return "built";
   });
@@ -82,7 +85,7 @@ test("without evidence the first choice is picked and recorded as default", asyn
   const outcome = { prompts: [{ item: "Earlier", choice: "X", how: "name" }] };
   const prompt = fakePrompt("Odd Training", [{ value: "a", label: "First" }, { value: "b", label: "Second" }]);
 
-  await withChoicePrompts(evidence(), outcome, async () => hooks.callAll("renderPickAThingPrompt", prompt));
+  await withChoicePrompts(BUILT, { evidence: evidence(), outcome }, async () => hooks.callAll("renderPickAThingPrompt", prompt));
 
   assert.equal(prompt.selection.value, "a");
   assert.deepEqual(outcome.prompts[1], { item: "Odd Training", choice: "First", how: "default" });
@@ -94,7 +97,7 @@ test("a prompt without choices closes with no selection and is recorded as unans
   const prompt = fakePrompt("Empty Gift", []);
   prompt.selection = { value: "stale" };
 
-  await withChoicePrompts(evidence(), outcome, async () => hooks.callAll("renderPickAThingPrompt", prompt));
+  await withChoicePrompts(BUILT, { evidence: evidence(), outcome }, async () => hooks.callAll("renderPickAThingPrompt", prompt));
 
   assert.equal(prompt.selection, null);
   assert.equal(prompt.closed, 1);
@@ -108,7 +111,7 @@ test("the previous selection of the same source wins", async () => {
   const prompt = fakePrompt("Gift of Paths", [{ value: "left", label: "Left" }, { value: "right", label: "Right" }], sourceId);
   const facts = evidence({ previous: new Map([[sourceId, new Set(["right"])]]) });
 
-  await withChoicePrompts(facts, outcome, async () => hooks.callAll("renderPickAThingPrompt", prompt));
+  await withChoicePrompts(BUILT, { evidence: facts, outcome }, async () => hooks.callAll("renderPickAThingPrompt", prompt));
 
   assert.equal(prompt.selection.value, "right");
   assert.equal(outcome.prompts[0].how, "previous");
@@ -120,7 +123,7 @@ test("the fallback hook catches prompts and each prompt is answered once even wh
   const prompt = fakePrompt("Twin Call", [{ value: "a", label: "A" }]);
   const window = { choices: "not a list", selection: null, close() { throw new Error("must not close"); } };
 
-  await withChoicePrompts(evidence(), outcome, async () => {
+  await withChoicePrompts(BUILT, { evidence: evidence(), outcome }, async () => {
     hooks.callAll("renderPickAThingPrompt", prompt);
     hooks.callAll("renderApplicationV2", prompt);
     hooks.callAll("renderApplicationV2", prompt);
@@ -134,7 +137,7 @@ test("the fallback hook catches prompts and each prompt is answered once even wh
 test("the hooks are removed afterwards, also when the build throws", async () => {
   const hooks = installFoundry();
   const outcome = {};
-  await assert.rejects(withChoicePrompts(evidence(), outcome, async () => {
+  await assert.rejects(withChoicePrompts(BUILT, { evidence: evidence(), outcome }, async () => {
     assert.equal(hooks.count(), 2);
     throw new Error("build failed");
   }), /build failed/);
@@ -156,13 +159,66 @@ test("a failing answer still closes the prompt, unanswered", async () => {
   const warn = console.warn;
   console.warn = () => {};
   try {
-    await withChoicePrompts(evidence(), outcome, async () => hooks.callAll("renderPickAThingPrompt", prompt));
+    await withChoicePrompts(BUILT, { evidence: evidence(), outcome }, async () => hooks.callAll("renderPickAThingPrompt", prompt));
   } finally {
     console.warn = warn;
   }
   assert.equal(prompt.selection, null);
   assert.equal(prompt.closed, 1);
   assert.deepEqual(outcome.prompts, [{ item: "Fragile Choice", choice: null, how: null }]);
+});
+
+test("a prompt of another actor's item is left open and not recorded", async () => {
+  const hooks = installFoundry();
+  const outcome = {};
+  const foreign = fakePrompt("Stray Gift", [{ value: "a", label: "A" }], null, OTHER);
+  const unowned = fakePrompt("Loose Gift", [{ value: "a", label: "A" }], null, null);
+
+  await withChoicePrompts(BUILT, { evidence: evidence(), outcome }, async () => {
+    hooks.callAll("renderPickAThingPrompt", foreign);
+    hooks.callAll("renderPickAThingPrompt", unowned);
+  });
+
+  assert.equal(foreign.closed, 0);
+  assert.equal(foreign.selection, null);
+  assert.equal(unowned.closed, 0);
+  assert.deepEqual(outcome.prompts, []);
+});
+
+test("two builds running at once each answer only their own actor's prompts from their own evidence", async () => {
+  const hooks = installFoundry();
+  const first = {};
+  const second = {};
+  const choices = [{ value: "axe", label: "Axe" }, { value: "blade", label: "Blade" }];
+  const firstPrompt = fakePrompt("Weapon Drill", choices, null, BUILT);
+  const secondPrompt = fakePrompt("Weapon Drill", choices, null, OTHER);
+  const wantsBlade = evidence({ suffixes: new Map([["weapon-drill", new Set(["blade"])]]) });
+  const wantsAxe = evidence({ suffixes: new Map([["weapon-drill", new Set(["axe"])]]) });
+
+  let releaseFirst;
+  const firstBuild = withChoicePrompts(BUILT, { evidence: wantsBlade, outcome: first },
+    () => new Promise((resolve) => (releaseFirst = resolve)));
+  await withChoicePrompts(OTHER, { evidence: wantsAxe, outcome: second }, async () => {
+    hooks.callAll("renderPickAThingPrompt", secondPrompt);
+    hooks.callAll("renderPickAThingPrompt", firstPrompt);
+  });
+  releaseFirst();
+  await firstBuild;
+
+  assert.equal(firstPrompt.selection.value, "blade");
+  assert.equal(secondPrompt.selection.value, "axe");
+  assert.deepEqual(first.prompts, [{ item: "Weapon Drill", choice: "Blade", how: "suffix" }]);
+  assert.deepEqual(second.prompts, [{ item: "Weapon Drill", choice: "Axe", how: "suffix" }]);
+});
+
+test("a prompt belongs to the actor by identity or by uuid, never without an owner", () => {
+  assert.equal(isPromptFor({ item: { actor: BUILT } }, BUILT), true);
+  assert.equal(isPromptFor({ item: { actor: { uuid: BUILT.uuid } } }, BUILT), true);
+  assert.equal(isPromptFor({ item: { actor: OTHER } }, BUILT), false);
+  assert.equal(isPromptFor({ item: { actor: {} } }, {}), false);
+  assert.equal(isPromptFor({ item: { actor: null } }, BUILT), false);
+  assert.equal(isPromptFor({ item: null }, BUILT), false);
+  assert.equal(isPromptFor({ item: { actor: BUILT } }, null), false);
 });
 
 test("isChoicePrompt needs a choice list and a selection field", () => {

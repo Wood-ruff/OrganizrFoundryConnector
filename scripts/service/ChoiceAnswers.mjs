@@ -2,8 +2,9 @@ import { baseName, SKILL_SLUGS } from "./Pf2eRecipe.mjs";
 
 /**
  * The choice to pick in a pf2e choice prompt (`{itemName, sourceId, choices: [{value, label}]}`) from recipe evidence:
- * a previous selection, the item's suffix, an uncovered recipe name (lowest level first), any recipe name, the best
- * ranked skill, else the first choice. → `{index, how}`, or null without choices.
+ * a previous selection, the item's suffix (that of the entry being written first, then an uncovered one), an uncovered
+ * recipe name (lowest level first), any recipe name, the best ranked skill, else the first choice. → `{index, how}`, or
+ * null without choices.
  */
 export function answerChoice(prompt, evidence, sluggify) {
   const choices = Array.isArray(prompt?.choices) ? prompt.choices : [];
@@ -11,7 +12,7 @@ export function answerChoice(prompt, evidence, sluggify) {
   const slugs = choices.map((choice) => labelSlug(choice, sluggify));
   const answers = [
     ["previous", () => previousIndex(choices, evidence?.previous?.get(prompt.sourceId))],
-    ["suffix", () => suffixIndex(slugs, evidence?.suffixes, prompt.itemName, sluggify)],
+    ["suffix", () => suffixIndex({ choices, slugs }, evidence, prompt.itemName, sluggify)],
     ["uncovered", () => uncoveredIndex(slugs, evidence?.uncovered, evidence?.levels)],
     ["name", () => slugs.findIndex((slug) => evidence?.names?.has(slug) === true)],
     ["skill", () => skillIndex(choices, evidence?.skillRanks)]
@@ -54,12 +55,36 @@ function sameValue(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function suffixIndex(slugs, suffixes, itemName, sluggify) {
+/**
+ * A suffix the recipe names for the item's base: the one of the recipe entry being written (`evidence.writing`), else
+ * the first whose "Base (Suffix)" is still uncovered, else the first.
+ */
+function suffixIndex({ choices, slugs }, evidence, itemName, sluggify) {
   const base = baseName(itemName).base;
   if (base === "") return -1;
-  const wanted = suffixes?.get(sluggify(base));
+  const wanted = evidence?.suffixes?.get(sluggify(base));
   if (!wanted) return -1;
-  return slugs.findIndex((slug) => wanted.has(slug));
+  const indexes = [];
+  slugs.forEach((slug, index) => {
+    if (wanted.has(slug)) indexes.push(index);
+  });
+  const own = writingSuffix(evidence?.writing, base, sluggify);
+  const ownIndex = indexes.find((index) => slugs[index] === own);
+  if (ownIndex !== undefined) return ownIndex;
+  const open = indexes.find((index) => isUncoveredSuffix(base, choices[index], evidence, sluggify));
+  return open ?? indexes[0] ?? -1;
+}
+
+/** The suffix slug of the recipe entry being written when it is "Base (Suffix)" of this base, else null. */
+function writingSuffix(writing, base, sluggify) {
+  const parts = baseName(writing);
+  if (parts.suffix === null || sluggify(parts.base) !== sluggify(base)) return null;
+  return sluggify(parts.suffix);
+}
+
+function isUncoveredSuffix(base, choice, evidence, sluggify) {
+  const label = String(choice?.label ?? "").trim();
+  return evidence?.uncovered?.has(sluggify(`${base} (${label})`)) === true;
 }
 
 /** The uncovered choice with the lowest recipe level (no level counts last), ties in choice order. */

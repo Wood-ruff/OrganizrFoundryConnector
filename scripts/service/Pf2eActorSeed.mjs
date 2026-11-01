@@ -1,22 +1,26 @@
 import { ATTRIBUTES, manualAbilities } from "./Pf2eBoosts.mjs";
 import { withBuildFlag } from "./Pf2eItemSources.mjs";
 import { SKILL_SLUGS } from "./Pf2eRecipe.mjs";
+import { IDENTITY_KINDS } from "./Pf2eItemTypes.mjs";
+import { clamp } from "../util/WholeNumbers.mjs";
 
 const BUILD_FORMAT_VERSION = 1;
 const MAX_LEVEL = 30;
 const MAX_SKILL_RANK = 4;
 const ACTOR_KEYS = ["name", "img", "_stats", "flags"];
-const FACT_KEYS = ["age", "height", "weight", "gender", "ethnicity", "nationality"];
-const TEXT_KEYS = [
+/** The biography facts (`system.details.<fact>.value`) a build writes. */
+export const FACT_KEYS = Object.freeze(["age", "height", "weight", "gender", "ethnicity", "nationality"]);
+/** The biography texts (`system.details.biography.<text>`) a build writes. */
+export const TEXT_KEYS = Object.freeze([
   "birthPlace", "attitude", "beliefs", "likes", "dislikes", "catchphrases", "appearance", "backstory", "campaignNotes",
   "allies", "enemies", "organizations"
-];
-const ABC_KINDS = ["ancestry", "heritage", "background", "class", "deity"];
+]);
 
 /**
  * The character actor to create before any item: the recipe's level (pf2e grants class features by the level at class
  * creation), xp, biography, languages, skill ranks and either the boost selections of `plan.boosts` or, without them,
- * manual modifiers with the key attribute. `plan` = `{boosts: boostPlan | null, languages: [slug]}`.
+ * manual modifiers with the key attribute. `plan` = `{boosts: boostPlan | null, languages: [slug], buildId?, gearKeys?}`;
+ * the build flag records the build id and the gear keys the build creates when given.
  */
 export function actorSeed(document, recipe, plan) {
   const seed = documentFields(document);
@@ -27,7 +31,14 @@ export function actorSeed(document, recipe, plan) {
   };
   if (plan?.boosts) seed.system.build = { attributes: { boosts: structuredClone(plan.boosts.boosts) } };
   else addManualAttributes(seed.system, recipe);
-  return withBuildFlag(seed, { version: BUILD_FORMAT_VERSION });
+  return withBuildFlag(seed, buildFlagOf(plan));
+}
+
+function buildFlagOf(plan) {
+  const flag = { version: BUILD_FORMAT_VERSION };
+  if (typeof plan?.buildId === "string") flag.id = plan.buildId;
+  if (Array.isArray(plan?.gearKeys)) flag.gearKeys = [...plan.gearKeys];
+  return flag;
 }
 
 /**
@@ -37,7 +48,7 @@ export function actorSeed(document, recipe, plan) {
 export function abcSources(sources, plan, keyAttribute) {
   const boosts = plan?.boosts ?? null;
   const shaped = [];
-  for (const kind of ABC_KINDS) {
+  for (const kind of IDENTITY_KINDS) {
     const source = sources?.[kind];
     if (!source) continue;
     shaped.push(abcSource(kind, source, boosts, keyAttribute));
@@ -158,8 +169,4 @@ function languageSlug(name, languages, sluggify) {
 
 function wholeOf(value) {
   return Number.isFinite(value) ? Math.trunc(value) : 0;
-}
-
-function clamp(value, low, high) {
-  return Math.min(Math.max(value, low), Math.max(low, high));
 }

@@ -1,3 +1,6 @@
+import { isPlainObject, listOf } from "../util/ObjectLists.mjs";
+import { IDENTITY_KINDS } from "./Pf2eItemTypes.mjs";
+
 export const RECIPE_FORMAT = "organizr-pf2e-recipe";
 export const RECIPE_VERSION = 1;
 
@@ -9,7 +12,6 @@ export const SKILL_SLUGS = [
 
 const RECIPE_VERSION_ERROR = "ORGANIZR.Build.Errors.RecipeVersion";
 const SUFFIXED_NAME = /^(.*\S)\s+\(([^()]*\S[^()]*)\)\s*$/;
-const IDENTITY_KINDS = ["ancestry", "heritage", "background", "class", "deity"];
 
 /** The lang key of why a `{document, recipe}` answer cannot be built (no recipe, another format or version), else null. */
 export function recipeErrorKey(payload) {
@@ -29,8 +31,8 @@ export function baseName(name) {
 
 /**
  * The hints for answering pf2e's choice prompts from a recipe: suffixes by base slug, every name slug, the lowest feature
- * level by slug, the slugs not yet on the actor (`uncovered`, shrunk by `markCovered`), skill ranks and the previous
- * selections by item source id.
+ * level by slug, the slugs not yet on the actor (`uncovered`, shrunk by `markCovered`), skill ranks, the previous
+ * selections by item source id and the name of the recipe entry being written (`writing`, set by `markWriting`).
  */
 export function recipeEvidence(recipe, sluggify, previous = new Map()) {
   const evidence = {
@@ -39,7 +41,8 @@ export function recipeEvidence(recipe, sluggify, previous = new Map()) {
     levels: new Map(),
     uncovered: new Set(),
     skillRanks: skillRanksOf(recipe?.skills),
-    previous
+    previous,
+    writing: null
   };
   for (const entry of evidenceEntries(recipe)) addEntryEvidence(evidence, entry, sluggify);
   return evidence;
@@ -50,6 +53,11 @@ export function markCovered(evidence, name, sluggify) {
   const { base, suffix } = baseName(name);
   evidence.uncovered.delete(sluggify(String(name ?? "").trim()));
   if (suffix !== null) evidence.uncovered.delete(sluggify(base));
+}
+
+/** Names the recipe entry whose item is being created (null when none); its suffix answers that item's prompt first. */
+export function markWriting(evidence, name) {
+  evidence.writing = typeof name === "string" ? name : null;
 }
 
 /** Every named recipe entry with whether its suffix counts as a choice hint and its feature level. */
@@ -107,12 +115,4 @@ function skillRanksOf(skills) {
     ranks.set(skill, Number.isFinite(rank) ? rank : 0);
   }
   return ranks;
-}
-
-function listOf(value) {
-  return Array.isArray(value) ? value.filter(isPlainObject) : [];
-}
-
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }

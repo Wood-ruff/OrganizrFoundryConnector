@@ -62,6 +62,21 @@ test("a seed without an image keeps the actor's image and token", () => {
   assert.equal(update.prototypeToken, undefined);
 });
 
+test("biography texts and facts the seed leaves out are written empty, so a merge update clears them", () => {
+  const withBiography = seed();
+  withBiography.system.details.biography = { backstory: "Grew up by the canal." };
+  withBiography.system.details.age = { value: "31" };
+  const details = actorRefreshUpdate(withBiography, {}).system.details;
+  assert.equal(details.biography.backstory, "Grew up by the canal.");
+  assert.equal(details.biography.appearance, "");
+  assert.equal(details.biography.campaignNotes, "");
+  assert.deepEqual(details.age, { value: "31" });
+  assert.deepEqual(details.height, { value: "" });
+  assert.deepEqual(details.nationality, { value: "" });
+  assert.equal(details.level.value, 7);
+  assert.equal(Object.keys(details.biography).length, 12);
+});
+
 test("the update never changes the seed it was made from", () => {
   const source = seed();
   const before = structuredClone(source);

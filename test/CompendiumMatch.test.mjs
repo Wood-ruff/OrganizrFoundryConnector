@@ -17,8 +17,8 @@ test("the packs are searched in their pinned priority order", () => {
   assert.deepEqual(PACKS.class, ["pf2e.classes"]);
   assert.deepEqual(PACKS.coins, ["pf2e.equipment-srd"]);
   assert.ok(!ITEM_TYPES.inventory.includes("kit"));
-  assert.deepEqual(ITEM_TYPES.inventory, [
-    "equipment", "consumable", "weapon", "treasure", "armor", "ammo", "backpack", "shield"
+  assert.deepEqual([...ITEM_TYPES.inventory].sort(), [
+    "ammo", "armor", "backpack", "book", "consumable", "equipment", "shield", "treasure", "weapon"
   ]);
 });
 
@@ -123,6 +123,20 @@ test("inventory rows skip kits and keep pack order", () => {
   const rows = candidateRows("inventory", rowsByPack);
   assert.deepEqual(rows.map((entry) => entry.name), ["Brass Lamp"]);
   assert.deepEqual(matchEntry("Traveler Bundle", rows, options), { status: "missing" });
+});
+
+test("an inventory entry matches a book row of the equipment pack", () => {
+  const rowsByPack = new Map([
+    ["pf2e.equipment-srd", [
+      row("Blank Ledger", { type: "book", pack: "pf2e.equipment-srd" }),
+      row("Brass Lamp", { type: "equipment", pack: "pf2e.equipment-srd" })
+    ]]
+  ]);
+  const rows = candidateRows("inventory", rowsByPack);
+  assert.deepEqual(rows.map((entry) => entry.name), ["Blank Ledger", "Brass Lamp"]);
+  const match = matchEntry("Blank Ledger", rows, options);
+  assert.equal(match.status, "compendium");
+  assert.equal(match.row.type, "book");
 });
 
 test("feature rows come from the three feat packs in priority order", () => {

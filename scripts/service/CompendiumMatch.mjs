@@ -1,6 +1,5 @@
 import { baseName } from "./Pf2eRecipe.mjs";
-
-const PHYSICAL_TYPES = ["equipment", "consumable", "weapon", "treasure", "armor", "ammo", "backpack", "shield"];
+import { PHYSICAL_TYPES } from "./Pf2eItemTypes.mjs";
 
 /** The compendium packs searched per recipe list, in priority order. */
 export const PACKS = Object.freeze({

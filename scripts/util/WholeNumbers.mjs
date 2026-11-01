@@ -19,3 +19,8 @@ export function addWholeNumber(target, key, value) {
 export function wholeOrZero(value) {
   return isFiniteNumber(value) ? Math.floor(value) : 0;
 }
+
+/** The value kept within `low`…`high`; a `high` below `low` counts as `low`. */
+export function clamp(value, low, high) {
+  return Math.min(Math.max(value, low), Math.max(low, high));
+}

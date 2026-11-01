@@ -1,4 +1,6 @@
 import { withBuildFlag } from "./Pf2eItemSources.mjs";
+import { isCovered } from "./CompendiumMatch.mjs";
+import { listOf } from "../util/ObjectLists.mjs";
 
 const ENTRYLESS_TYPES = ["ritual", "other"];
 const CLASS_DC = "classDc";
@@ -34,6 +36,27 @@ export function spellLocation(spell, entry, entryId) {
     location.uses = { value: uses, max: uses };
   }
   return location;
+}
+
+/**
+ * The spell sources to create, each located in its entry (`entryIds`: casting key → created entry id). A spell is
+ * skipped only when its own entry already holds it, on the actor (`actorItems`) or earlier in this batch; a spell
+ * outside any entry counts only for entries that were not created.
+ */
+export function spellSourcesToCreate(castings, sources, actorItems, { entryIds, sluggify }) {
+  const queued = [];
+  for (const casting of listOf(castings)) {
+    const entryId = entryIds.get(casting.key) ?? null;
+    const held = [...(actorItems ?? []), ...queued].filter((item) => locationOf(item) === entryId);
+    for (const spell of listOf(casting.spells)) {
+      const source = sources.get(spell.key);
+      if (!source || isCovered(spell, held, sluggify)) continue;
+      const located = { ...source, system: { ...(source.system ?? {}), location: spellLocation(spell, casting, entryId) } };
+      queued.push(located);
+      held.push(located);
+    }
+  }
+  return queued;
 }
 
 /**
@@ -145,6 +168,6 @@ function wholeOf(value) {
   return Number.isFinite(value) ? Math.trunc(value) : 0;
 }
 
-function listOf(value) {
-  return Array.isArray(value) ? value.filter((entry) => entry !== null && typeof entry === "object") : [];
+function locationOf(item) {
+  return item?.system?.location?.value ?? null;
 }

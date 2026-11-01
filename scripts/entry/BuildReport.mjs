@@ -7,8 +7,8 @@ const SPEAKER = "Organizr";
 
 /** A progress notice shown while a character is built (it can take a minute); `advance(share)` moves its bar. */
 export function startBuildNotice(name) {
-  const message = game.i18n.format("ORGANIZR.Build.Running", { name: name ?? "" });
-  const notice = ui.notifications.info(message, { progress: true });
+  const format = { name: name ?? "" };
+  const notice = ui.notifications.info("ORGANIZR.Build.Running", { localize: true, format, progress: true });
   return {
     advance: (share) => notice?.update?.({ pct: share }),
     close: () => ui.notifications.remove(notice)

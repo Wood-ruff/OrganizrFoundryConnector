@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { featOrder, freeFeatSlots, slotFor, slotGroupsFor } from "../scripts/service/FeatSlots.mjs";
+import { featOrder, freeFeatSlots, slotFor, slotGroupsFor, takesFeatSlot } from "../scripts/service/FeatSlots.mjs";
 
 function free(group, level) {
   return { group, slotId: `${group}-${level}`, level };
@@ -67,4 +67,12 @@ test("free slots come from pf2e's feat groups, empty and not above the actor lev
     { group: "skill", slotId: "skill-2", level: 2 }
   ]);
   assert.deepEqual(freeFeatSlots(null, 5), []);
+});
+
+test("only ancestry, class, general and skill features take a feat slot", () => {
+  for (const category of ["ancestry", "class", "general", "skill"]) assert.equal(takesFeatSlot(category), true);
+  for (const category of ["classfeature", "ancestryfeature", "bonus", "curse", "deityboon", "calling", "pfsboon"]) {
+    assert.equal(takesFeatSlot(category), false);
+  }
+  assert.equal(takesFeatSlot(undefined), false);
 });

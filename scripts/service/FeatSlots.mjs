@@ -20,6 +20,11 @@ export function slotGroupsFor(category) {
   return SLOT_GROUPS[category] ?? [];
 }
 
+/** Whether pf2e puts features of this category into feat slots (class features, bonus feats and the like it never does). */
+export function takesFeatSlot(category) {
+  return slotGroupsFor(category).length > 0;
+}
+
 /**
  * The empty feat slots of pf2e's feat groups (`[...actor.feats]`: `{id, slots: {<slotId>: {id, level, feat}}}`) as
  * `[{group, slotId, level}]`; the level is the slot's, else the trailing number of its id; none above the actor level.

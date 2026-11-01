@@ -1,7 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { batchImportOptions, batchPrompt, batchRestore, needsBatchConfirm, refreshPrompt } from "../scripts/service/RefreshPrompt.mjs";
+import {
+  batchImportOptions, batchPrompt, batchRestore, needsBatchConfirm, refreshPrompt, unbuiltRebuildCount
+} from "../scripts/service/RefreshPrompt.mjs";
+
+const MODULE = "organizr-foundry-connector";
 
 const BATCH_KEYS = {
   keepsKey: "ORGANIZR.Refresh.BatchKeeps",
@@ -9,7 +13,9 @@ const BATCH_KEYS = {
   skippedKey: "ORGANIZR.Refresh.BatchSkipped",
   restoreKey: "ORGANIZR.Refresh.BatchRestore",
   showCharacterRestore: false,
-  characterRestoreKey: "ORGANIZR.Refresh.Pf2e.BatchRestoreCharacters"
+  characterRestoreKey: "ORGANIZR.Refresh.Pf2e.BatchRestoreCharacters",
+  unbuilt: 0,
+  unbuiltKey: "ORGANIZR.Refresh.Pf2e.BatchUnbuilt"
 };
 
 async function readLang() {
@@ -108,12 +114,64 @@ test("a pf2e character refresh reads the pf2e rebuild texts and offers the resto
     { name: "Wren Halloway", bodyKey: `${pf2e}.CharacterBody`, restoreKey: `${pf2e}.RestoreInventory`, showRestore: true });
 });
 
-test("in a pf2e world loot, NPCs and items keep the shared refresh texts", () => {
+test("in a pf2e world loot and items keep the shared refresh texts and an NPC reads the pf2e one", () => {
   assert.deepEqual(refreshPrompt("Mossy Chest", "loot", "pf2e"),
     { name: "Mossy Chest", bodyKey: "ORGANIZR.Refresh.LootBody", restoreKey: "ORGANIZR.Refresh.RestoreInventory", showRestore: true });
   assert.deepEqual(refreshPrompt("Bramble Sentry", "npc", "pf2e"),
-    { name: "Bramble Sentry", bodyKey: "ORGANIZR.Refresh.ActorBody", restoreKey: "ORGANIZR.Refresh.RestoreInventory", showRestore: false });
+    { name: "Bramble Sentry", bodyKey: "ORGANIZR.Refresh.Pf2e.ActorBody", restoreKey: "ORGANIZR.Refresh.RestoreInventory", showRestore: false });
   assert.equal(refreshPrompt("Ember Lance", "spell", "pf2e").bodyKey, "ORGANIZR.Refresh.ItemBody");
+});
+
+test("an NPC refresh outside a pf2e world keeps its own text", () => {
+  for (const systemId of ["pf1", ""]) assert.equal(refreshPrompt("Bramble Sentry", "npc", systemId).bodyKey, "ORGANIZR.Refresh.ActorBody");
+  assert.equal(refreshPrompt("Bramble Sentry", "npc", "dnd5e").bodyKey, "ORGANIZR.Refresh.Dnd5e.ActorBody");
+});
+
+test("the pf2e NPC refresh text names only what a pf2e NPC refresh keeps", async () => {
+  const text = (await readLang()).ORGANIZR.Refresh.Pf2e.ActorBody;
+  assert.doesNotMatch(text, /pf1|buffs|nonlethal|prepared casts|item uses/);
+  for (const kept of [/token/, /current HP/, /temporary HP/, /focus points/, /spell slots/, /conditions/, /effects/]) {
+    assert.match(text, kept);
+  }
+});
+
+test("a pf2e character over a linked actor the connector did not build reads the replace-everything warning", () => {
+  const pf2e = "ORGANIZR.Refresh.Pf2e";
+  assert.deepEqual(refreshPrompt("Wren Halloway", "character", "pf2e", false),
+    { name: "Wren Halloway", bodyKey: `${pf2e}.UnbuiltCharacterBody`, restoreKey: `${pf2e}.RestoreInventory`, showRestore: true });
+  assert.equal(refreshPrompt("Wren Halloway", "character", "pf2e", true).bodyKey, `${pf2e}.CharacterBody`);
+  assert.equal(refreshPrompt("Ilva Test", "character", "pf1", false).bodyKey, "ORGANIZR.Refresh.CharacterBody");
+});
+
+test("the batch counts the pf2e characters rebuilt over an actor the connector did not build", () => {
+  const actors = new Map([
+    [2, { flags: { [MODULE]: { sheet: { fileId: 2 } } } }],
+    [3, { flags: { [MODULE]: { sheet: { fileId: 3 }, build: { version: 1 } } } }]
+  ]);
+  const plan = {
+    create: [],
+    refresh: [
+      { fileId: 2, type: "character", buildsFromRecipe: true },
+      { fileId: 3, type: "character", buildsFromRecipe: true },
+      { fileId: 4, type: "character", buildsFromRecipe: true },
+      { fileId: 5, type: "npc", buildsFromRecipe: false }
+    ],
+    skippedLoot: []
+  };
+  const linkedActorOf = (sheet) => actors.get(sheet.fileId) ?? null;
+  assert.equal(unbuiltRebuildCount(plan, "pf2e", linkedActorOf), 1);
+  assert.equal(unbuiltRebuildCount(plan, "pf1", linkedActorOf), 0);
+  assert.equal(batchPrompt(plan, "pf2e", 1).unbuilt, 1);
+  assert.equal(batchPrompt(plan, "pf1", 1).unbuilt, 0);
+});
+
+test("the unbuilt warnings say every item is replaced and what stays", async () => {
+  const texts = (await readLang()).ORGANIZR.Refresh.Pf2e;
+  for (const text of [texts.UnbuiltCharacterBody, texts.BatchUnbuilt]) {
+    for (const part of [/every item/, /conditions/, /effects/, /coins/, /added in Foundry/]) assert.match(text, part);
+  }
+  assert.match(texts.BatchUnbuilt, /\{count\}/);
+  assert.doesNotMatch(texts.UnbuiltCharacterBody, /keeps .*the items added in Foundry/);
 });
 
 test("only a pf2e world switches characters to the rebuild texts; dnd5e and pf1 characters keep theirs", () => {

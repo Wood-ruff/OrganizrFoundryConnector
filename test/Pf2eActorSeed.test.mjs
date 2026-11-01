@@ -35,6 +35,12 @@ test("the seed carries the level, xp and identity flags but no items, so the cla
   assert.equal(document.flags[MODULE].build, undefined);
 });
 
+test("the build flag records the build id and the gear keys the build creates when the plan names them", () => {
+  const seed = actorSeed(document, recipe, { boosts, languages: [], buildId: "ownbuild00000001", gearKeys: ["i:3", "i:1"] });
+  assert.deepEqual(seed.flags[MODULE].build, { version: 1, id: "ownbuild00000001", gearKeys: ["i:3", "i:1"] });
+  assert.deepEqual(actorSeed(document, recipe, { boosts, languages: [] }).flags[MODULE].build, { version: 1 });
+});
+
 test("with a boost plan the seed holds the level boosts and no manual abilities", () => {
   const seed = actorSeed(document, recipe, { boosts, languages: [] });
   assert.deepEqual(seed.system.build, { attributes: { boosts: boosts.boosts } });

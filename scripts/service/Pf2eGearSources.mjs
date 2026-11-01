@@ -1,3 +1,5 @@
+import { listOf } from "../util/ObjectLists.mjs";
+
 const CONTAINER_TYPE = "backpack";
 const HELD_TYPES = ["weapon", "shield"];
 const TWO_HANDS = "held-in-two-hands";
@@ -28,6 +30,12 @@ export function gearPlan(inventory, sourcesByKey) {
   const containers = entries.filter((entry) => holders.has(entry.key)).map((entry) => entry.key);
   const items = entries.filter((entry) => !holders.has(entry.key)).map((entry) => entry.key);
   return { containers: outerFirst(containers, parents), items, attached, parents };
+}
+
+/** The keys of every inventory entry the build creates (those with a source), containers first. */
+export function gearKeysOf(inventory, sourcesByKey) {
+  const gear = gearPlan(inventory, sourcesByKey);
+  return [...gear.containers, ...gear.items];
 }
 
 /**
@@ -110,8 +118,4 @@ function sourceFor(sourcesByKey, key) {
 
 function wholeOf(value) {
   return Number.isFinite(value) ? Math.trunc(value) : 0;
-}
-
-function listOf(value) {
-  return Array.isArray(value) ? value.filter((entry) => entry !== null && typeof entry === "object") : [];
 }

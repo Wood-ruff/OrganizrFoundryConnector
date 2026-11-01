@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { entrySource, preparedSlots, spellLocation, unplacedPreparations } from "../scripts/service/Pf2eSpellSources.mjs";
+import {
+  entrySource, preparedSlots, spellLocation, spellSourcesToCreate, unplacedPreparations
+} from "../scripts/service/Pf2eSpellSources.mjs";
+import { sluggify } from "./support/sluggify.mjs";
 
 const MODULE = "organizr-foundry-connector";
 
@@ -123,4 +126,67 @@ test("spells without an id and entries that are not prepared have no unplaced pr
   assert.deepEqual(unplacedPreparations(entry, {}), []);
   assert.deepEqual(unplacedPreparations({ ...entry, type: "innate" }, { "e/s:1": "x" }), []);
   assert.deepEqual(unplacedPreparations(null, null), []);
+});
+
+function spellSource(name) {
+  return { name, type: "spell", system: { slug: sluggify(name), level: { value: 1 } } };
+}
+
+function heldSpell(name, entryId) {
+  return { name, type: "spell", system: { slug: sluggify(name), location: { value: entryId } } };
+}
+
+test("a spell listed in two entries is created once in each entry", () => {
+  const innate = recipeEntry({ key: "e:gift", type: "innate", spells: [spell("e:gift/s:glint", { name: "Glint Sense" })] });
+  const prepared = recipeEntry({ key: "e:book", spells: [spell("e:book/s:glint", { name: "Glint Sense" })] });
+  const sources = new Map([["e:gift/s:glint", spellSource("Glint Sense")], ["e:book/s:glint", spellSource("Glint Sense")]]);
+  const entryIds = new Map([["e:gift", "entrygift0000001"], ["e:book", "entrybook0000001"]]);
+
+  const created = spellSourcesToCreate([innate, prepared], sources, [], { entryIds, sluggify });
+
+  assert.deepEqual(created.map((source) => source.system.location.value), ["entrygift0000001", "entrybook0000001"]);
+});
+
+test("a spell its own entry already holds, or that comes twice in one entry, is created once", () => {
+  const prepared = recipeEntry({ key: "e:book", spells: [
+    spell("e:book/s:glint", { name: "Glint Sense" }),
+    spell("e:book/s:mote", { name: "Ember Mote" }),
+    spell("e:book/s:mote-2", { name: "Ember Mote" })
+  ] });
+  const sources = new Map([
+    ["e:book/s:glint", spellSource("Glint Sense")],
+    ["e:book/s:mote", spellSource("Ember Mote")],
+    ["e:book/s:mote-2", spellSource("Ember Mote")]
+  ]);
+  const entryIds = new Map([["e:book", "entrybook0000001"]]);
+  const actorItems = [heldSpell("Glint Sense", "entrybook0000001")];
+
+  const created = spellSourcesToCreate([prepared], sources, actorItems, { entryIds, sluggify });
+
+  assert.deepEqual(created.map((source) => source.name), ["Ember Mote"]);
+});
+
+test("a spell held outside the entry, or in another entry, does not keep the entry's copy out", () => {
+  const prepared = recipeEntry({ key: "e:book", spells: [spell("e:book/s:glint", { name: "Glint Sense" })] });
+  const sources = new Map([["e:book/s:glint", spellSource("Glint Sense")]]);
+  const entryIds = new Map([["e:book", "entrybook0000001"]]);
+  const granted = [heldSpell("Glint Sense", null), heldSpell("Glint Sense", "entryother000001")];
+
+  const created = spellSourcesToCreate([prepared], sources, granted, { entryIds, sluggify });
+
+  assert.equal(created.length, 1);
+  assert.equal(created[0].system.location.value, "entrybook0000001");
+  assert.equal(created[0].system.level.value, 1);
+});
+
+test("a ritual already held outside any entry is not created again, and a spell without a source is skipped", () => {
+  const rituals = recipeEntry({ key: "e:rituals", type: "ritual", spells: [
+    spell("e:rituals/s:ward", { name: "Quiet Ward" }),
+    spell("e:rituals/s:unknown", { name: "Unknown Rite" })
+  ] });
+  const sources = new Map([["e:rituals/s:ward", spellSource("Quiet Ward")]]);
+
+  const created = spellSourcesToCreate([rituals], sources, [heldSpell("Quiet Ward", null)], { entryIds: new Map(), sluggify });
+
+  assert.deepEqual(created, []);
 });

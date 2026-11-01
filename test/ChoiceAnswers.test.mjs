@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { answerChoice, unansweredChoices } from "../scripts/service/ChoiceAnswers.mjs";
-import { markCovered, recipeEvidence } from "../scripts/service/Pf2eRecipe.mjs";
+import { markCovered, markWriting, recipeEvidence } from "../scripts/service/Pf2eRecipe.mjs";
 import { sluggify } from "./support/sluggify.mjs";
 
 function prompt(itemName, labels, { sourceId = null, values = null } = {}) {
@@ -41,6 +41,46 @@ test("the suffix of the recipe name picks its label", () => {
   const evidence = evidenceOf({ features: [{ name: "Fighter Weapon Mastery (Sword)", category: "classfeature" }] });
   const answer = answerChoice(prompt("Fighter Weapon Mastery", ["Axe", "Bow", "Sword"]), evidence, sluggify);
   assert.deepEqual(answer, { index: 2, how: "suffix" });
+});
+
+test("a feat taken twice with two suffixes picks the suffix the actor does not hold yet", () => {
+  const evidence = evidenceOf({
+    features: [{ name: "Steady Craft (Athletics)", level: 1 }, { name: "Steady Craft (Medicine)", level: 3 }]
+  });
+  const choices = ["Acrobatics", "Athletics", "Medicine"];
+  const first = answerChoice(prompt("Steady Craft", choices), evidence, sluggify);
+  assert.deepEqual(first, { index: 1, how: "suffix" });
+  markCovered(evidence, "Steady Craft (Athletics)", sluggify);
+  const second = answerChoice(prompt("Steady Craft", choices), evidence, sluggify);
+  assert.deepEqual(second, { index: 2, how: "suffix" });
+});
+
+test("the suffix of the entry being written wins over an earlier uncovered suffix", () => {
+  const evidence = evidenceOf({
+    features: [{ name: "Steady Craft (Medicine)", level: 1 }, { name: "Steady Craft (Athletics)", level: 2 }]
+  });
+  const choices = ["Acrobatics", "Athletics", "Medicine"];
+  markWriting(evidence, "Steady Craft (Medicine)");
+  assert.deepEqual(answerChoice(prompt("Steady Craft", choices), evidence, sluggify), { index: 2, how: "suffix" });
+  markCovered(evidence, "Steady Craft (Medicine)", sluggify);
+  markWriting(evidence, "Steady Craft (Athletics)");
+  assert.deepEqual(answerChoice(prompt("Steady Craft", choices), evidence, sluggify), { index: 1, how: "suffix" });
+});
+
+test("an entry of another base being written gives no suffix hint for this prompt", () => {
+  const evidence = evidenceOf({
+    features: [{ name: "Steady Craft (Athletics)", level: 1 }, { name: "Keen Study (Medicine)", level: 1 }]
+  });
+  markWriting(evidence, "Keen Study (Medicine)");
+  const answer = answerChoice(prompt("Steady Craft", ["Medicine", "Athletics"]), evidence, sluggify);
+  assert.deepEqual(answer, { index: 1, how: "suffix" });
+});
+
+test("when every wanted suffix is already held the first wanted one is still picked", () => {
+  const evidence = evidenceOf({ features: [{ name: "Steady Craft (Medicine)", level: 1 }] });
+  markCovered(evidence, "Steady Craft (Medicine)", sluggify);
+  const answer = answerChoice(prompt("Steady Craft", ["Athletics", "Medicine"]), evidence, sluggify);
+  assert.deepEqual(answer, { index: 1, how: "suffix" });
 });
 
 test("an uncovered recipe name beats a covered one", () => {

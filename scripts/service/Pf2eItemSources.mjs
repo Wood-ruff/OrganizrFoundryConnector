@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../config/ModuleId.mjs";
+import { listOf } from "../util/ObjectLists.mjs";
 
 /** A compendium item source ready to embed: no `_id`, `_stats.compendiumSource` set, the build key flag, optional runes. */
 export function compendiumSource(source, uuid, key, runes = null) {
@@ -38,6 +39,19 @@ export function slottedFeat(source, slot) {
 export function buildKeyOf(itemSource) {
   const key = itemSource?.flags?.[MODULE_ID]?.build?.key;
   return typeof key === "string" ? key : null;
+}
+
+/** The build id of the actor whose build created this item source, or null (none recorded). */
+export function buildOwnerOf(itemSource) {
+  const owner = itemSource?.flags?.[MODULE_ID]?.build?.owner;
+  return typeof owner === "string" ? owner : null;
+}
+
+/** A copy of a source with a build key that also names the build creating it; a source without a key is copied as is. */
+export function withBuildOwner(source, buildId) {
+  const key = buildKeyOf(source);
+  if (key === null || typeof buildId !== "string") return structuredClone(source ?? {});
+  return withBuildFlag(source, { ...source.flags[MODULE_ID].build, owner: buildId });
 }
 
 /** A copy of the source whose `flags[MODULE].build` is the given value (other module flags kept). */
@@ -93,8 +107,4 @@ function plainSlug(text) {
 
 function wholeRank(value) {
   return Number.isFinite(value) ? Math.trunc(value) : 0;
-}
-
-function listOf(value) {
-  return Array.isArray(value) ? value.filter((entry) => entry !== null && typeof entry === "object") : [];
 }

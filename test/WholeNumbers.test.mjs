@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addWholeNumber, isFiniteNumber, wholeNumbers, wholeOrZero } from "../scripts/util/WholeNumbers.mjs";
+import { addWholeNumber, clamp, isFiniteNumber, wholeNumbers, wholeOrZero } from "../scripts/util/WholeNumbers.mjs";
 
 test("only finite numbers count as numbers", () => {
   assert.equal(isFiniteNumber(3.5), true);
@@ -27,4 +27,11 @@ test("a missing or non-numeric value reads as 0", () => {
   assert.equal(wholeOrZero(7.8), 7);
   assert.equal(wholeOrZero(undefined), 0);
   assert.equal(wholeOrZero("12"), 0);
+});
+
+test("a value is kept within its bounds, and a top below the bottom counts as the bottom", () => {
+  assert.equal(clamp(5, 0, 10), 5);
+  assert.equal(clamp(-3, 0, 10), 0);
+  assert.equal(clamp(12, 0, 10), 10);
+  assert.equal(clamp(4, 1, 0), 1);
 });

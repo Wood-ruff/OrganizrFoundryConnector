@@ -1,8 +1,9 @@
 import { PACKS, allowsBaseName, candidateRows, entryOutcome, matchEntry } from "./CompendiumMatch.mjs";
 import { compendiumSource, customSource } from "./Pf2eItemSources.mjs";
 import { coinEntries } from "./Pf2eGearSources.mjs";
+import { listOf } from "../util/ObjectLists.mjs";
+import { IDENTITY_KINDS } from "./Pf2eItemTypes.mjs";
 
-const IDENTITY_KINDS = ["ancestry", "heritage", "background", "class", "deity"];
 const ENTRY_LISTS = ["features", "actions", "spells", "inventory", "coins"];
 
 /** The compendium packs a recipe needs indexed: those of the identity it names and of the lists it fills. */
@@ -143,8 +144,4 @@ function reportList(list) {
 
 function nameOf(entry) {
   return typeof entry?.name === "string" ? entry.name.trim() : "";
-}
-
-function listOf(value) {
-  return Array.isArray(value) ? value.filter((entry) => entry !== null && typeof entry === "object") : [];
 }

@@ -1,18 +1,21 @@
-import { markCovered } from "../service/Pf2eRecipe.mjs";
+import { markCovered, markWriting } from "../service/Pf2eRecipe.mjs";
 import { isCovered } from "../service/CompendiumMatch.mjs";
-import { featOrder, freeFeatSlots, slotFor } from "../service/FeatSlots.mjs";
+import { featOrder, freeFeatSlots, slotFor, takesFeatSlot } from "../service/FeatSlots.mjs";
 import { abcSources } from "../service/Pf2eActorSeed.mjs";
-import { buildKeyOf, loreSources, slottedFeat } from "../service/Pf2eItemSources.mjs";
+import { buildKeyOf, loreSources, slottedFeat, withBuildOwner } from "../service/Pf2eItemSources.mjs";
 import { gearPlan, placedGearSource } from "../service/Pf2eGearSources.mjs";
 import {
-  entrySource, preparedSlots, spellLocation, unplacedPreparations
+  entrySource, preparedSlots, spellSourcesToCreate, unplacedPreparations
 } from "../service/Pf2eSpellSources.mjs";
+import { listOf } from "../util/ObjectLists.mjs";
 
 /**
  * Writes a planned build's items onto the actor in pf2e's order: ancestry, heritage, background, class and deity, the
  * features one at a time into free feat slots, actions, lores, spellcasting and gear with coins. Choice prompts are
- * answered by the caller. A rebuild's `plan.keptId(key)` gives a root its previous `_id`. Fills and returns `written`
- * (`{unslotted, attached, unplaced}`) for the report; a caller passing its own sees what was written before a failure.
+ * answered by the caller. Every root names `plan.buildId` as its owner. A rebuild's `plan.keptId(key)` gives a root its
+ * previous `_id`, `plan.skipsGear(key)` leaves out gear used up in Foundry and `plan.keepsCoins` the coins. Fills and
+ * returns `written` (`{unslotted, attached, unplaced}`) for the report; a caller passing its own sees what was written
+ * before a failure.
  */
 export async function writeBuildItems(actor, recipe, plan, evidence, written = emptyWritten()) {
   const sluggify = game.pf2e.system.sluggify;
@@ -37,8 +40,10 @@ async function writeFeatures(actor, recipe, plan, { evidence, sluggify, written 
     const source = plan.sources.get(feature.key);
     if (!source || isCovered(feature, actor.items, sluggify)) continue;
     const slot = slotFor(feature, freeFeatSlots([...actor.feats], actor.level));
-    if (!slot) written.unslotted.push(feature.name);
+    if (!slot && takesFeatSlot(feature.category)) written.unslotted.push(feature.name);
+    markWriting(evidence, feature.name);
     await createItems(actor, [slottedFeat(source, slot)], plan);
+    markWriting(evidence, null);
     markItemsCovered(evidence, actor, sluggify);
   }
 }
@@ -62,26 +67,12 @@ async function writeSpellcasting(actor, recipe, plan, { sluggify, written }) {
   const classSlug = plan.identity.class?.system?.slug ?? null;
   const entrySources = castings.map((casting) => entrySource(casting, classSlug, casting.key)).filter(Boolean);
   const entryIds = idsByBuildKey(await createItems(actor, entrySources, plan));
-  const spells = spellSources(actor, castings, plan.sources, { entryIds, sluggify });
+  const spells = spellSourcesToCreate(castings, plan.sources, actor.items, { entryIds, sluggify });
   const spellIds = idsByBuildKey(await createItems(actor, spells, plan));
   for (const casting of castings) {
     await prepareEntry(actor.items.get(entryIds.get(casting.key)), casting, spellIds);
     written.unplaced.push(...unplacedPreparations(casting, spellIds));
   }
-}
-
-/** The spell sources to create, located in their entry; a spell the actor or the batch already holds is skipped. */
-function spellSources(actor, castings, sources, { entryIds, sluggify }) {
-  const queued = [];
-  for (const casting of castings) {
-    for (const spell of listOf(casting.spells)) {
-      const source = sources.get(spell.key);
-      if (!source || isCovered(spell, [...actor.items, ...queued], sluggify)) continue;
-      const location = spellLocation(spell, casting, entryIds.get(casting.key) ?? null);
-      queued.push({ ...source, system: { ...(source.system ?? {}), location } });
-    }
-  }
-  return queued;
 }
 
 async function prepareEntry(entry, casting, spellIds) {
@@ -91,7 +82,7 @@ async function prepareEntry(entry, casting, spellIds) {
 
 /** Backpacks first (one at a time, outer ones first, so inner ones know their container), then the rest and coins. */
 async function writeGear(actor, recipe, plan, written) {
-  const inventory = listOf(recipe.inventory);
+  const inventory = listOf(recipe.inventory).filter((entry) => !skipsGear(plan, entry.key));
   const entries = new Map(inventory.map((entry) => [entry.key, entry]));
   const gear = gearPlan(inventory, plan.sources);
   written.attached.push(...gear.attached.map((key) => entries.get(key).name));
@@ -108,17 +99,26 @@ async function writeGear(actor, recipe, plan, written) {
   await createItems(actor, [...items, ...coinSources(plan)], plan);
 }
 
+function skipsGear(plan, key) {
+  return typeof plan.skipsGear === "function" && plan.skipsGear(key);
+}
+
 function coinSources(plan) {
+  if (plan.keepsCoins === true) return [];
   const coins = plan.matches.entries.filter((match) => match.list === "coins");
   return sourcesOf(coins, plan.sources);
 }
 
-/** Creates the sources in one call; on a rebuild every root gets its previous `_id` (else a new one) and keeps it. */
+/**
+ * Creates the sources in one call, each root owned by the plan's build; on a rebuild every root gets its previous `_id`
+ * (else a new one) and keeps it.
+ */
 async function createItems(actor, sources, plan) {
   if (sources.length === 0) return [];
+  const owned = sources.map((source) => withBuildOwner(source, plan?.buildId));
   const keptId = plan?.keptId;
-  if (typeof keptId !== "function") return actor.createEmbeddedDocuments("Item", sources, { render: false });
-  const identified = sources.map((source) => ({ ...source, _id: keptId(buildKeyOf(source)) ?? foundry.utils.randomID() }));
+  if (typeof keptId !== "function") return actor.createEmbeddedDocuments("Item", owned, { render: false });
+  const identified = owned.map((source) => ({ ...source, _id: keptId(buildKeyOf(source)) ?? foundry.utils.randomID() }));
   return actor.createEmbeddedDocuments("Item", identified, { render: false, keepId: true });
 }
 
@@ -138,8 +138,4 @@ function idsByBuildKey(items) {
     if (key !== null) ids.set(key, item.id);
   }
   return ids;
-}
-
-function listOf(value) {
-  return Array.isArray(value) ? value.filter((entry) => entry !== null && typeof entry === "object") : [];
 }

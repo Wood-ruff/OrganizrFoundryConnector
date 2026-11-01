@@ -1,61 +1,66 @@
 import { MODULE_ID } from "../config/ModuleId.mjs";
 import { currentItemMatcher } from "../util/ItemMatch.mjs";
-import { isFiniteNumber } from "../util/WholeNumbers.mjs";
+import { clamp, isFiniteNumber } from "../util/WholeNumbers.mjs";
 import { buildKeyOf } from "./Pf2eItemSources.mjs";
+import { listOf, mergedById } from "../util/ObjectLists.mjs";
+import { PHYSICAL_TYPES } from "./Pf2eItemTypes.mjs";
+import { isBuiltActor, ownRoots, rootIdsToDelete } from "./BuiltRoots.mjs";
 
-const ABC_TYPES = ["ancestry", "heritage", "background", "class", "deity"];
-const PHYSICAL_TYPES = ["armor", "shield", "weapon", "equipment", "consumable", "treasure", "backpack", "ammo", "book"];
-const KEPT_TYPES_WITHOUT_BUILD = ["condition", "effect"];
 const ENTRY_TYPE = "spellcastingEntry";
 const SPELL_TYPE = "spell";
 const CHOICE_SET = "ChoiceSet";
 
 /**
- * The play state of a pf2e actor before it is rebuilt from Organizr: HP, temp HP, hero and focus points; per build key
- * the root `_id` and the quantity, uses and HP of physical items; innate spell uses and spell slot values with the
- * expended preparations per spell; the ChoiceSet selections per compendium source (`choices`, only sources one item
- * holds) and the kept items inside a root that will be deleted (`containers`). An actor the connector did not build
- * keeps its item values by type and name (`byName`), its entries and spells by name, and no ids.
+ * The play state of a pf2e actor before it is rebuilt from Organizr: HP, temp HP, hero and focus points; per own build
+ * key the root `_id` and the quantity, uses, HP and container of physical items; innate spell uses and spell slot values
+ * with the expended preparations per spell; the ChoiceSet selections per compendium source (`choices`, only sources one
+ * item holds); the kept items inside a root that will be deleted (`containers`) and the gear keys the build created
+ * (`gearKeys`). An actor the connector did not build keeps its item values by type and name (`byName`), its entries and
+ * spells by name, and no ids. `keepCoins` is passed on to `rootIdsToDelete`.
  */
-export function snapshotPlayState(actorSource) {
+export function snapshotPlayState(actorSource, { keepCoins = false } = {}) {
   const items = itemsOf(actorSource);
   const built = isBuiltActor(actorSource);
-  const deleted = new Set(rootIdsToDelete(actorSource));
+  const deleted = new Set(rootIdsToDelete(actorSource, { keepCoins }));
+  const roots = rootStates(actorSource);
+  const stateItems = items.filter((item) => isStateHolder(roots, built, item));
   return {
     built,
     actor: actorValues(actorSource?.system),
-    roots: built ? rootStates(items) : new Map(),
+    roots,
     byName: built ? [] : namedStates(items),
-    spellUses: spellUses(items, built),
-    entries: entryStates(items, built),
+    spellUses: spellUses(stateItems, built),
+    entries: entryStates(stateItems, built),
     choices: choiceSelections(items),
-    containers: keptContents(items, deleted)
+    containers: keptContents(items, deleted),
+    gearKeys: builtGearKeys(actorSource)
   };
 }
 
 /**
- * The ids of the items a rebuild deletes, in item order: on a built actor every item with a build key, every item
- * those grant (any `onDelete` kind) and every item placed in a deleted ancestry, heritage, background, class or deity,
- * repeated until nothing is added; on any other actor every item except conditions and effects.
+ * Whether the build made this gear key before and its item is gone (used up, sold or given away in Foundry), so a
+ * refresh that keeps the inventory does not bring it back.
  */
-export function rootIdsToDelete(actorSource) {
-  const items = itemsOf(actorSource);
-  if (!isBuiltActor(actorSource)) {
-    return items.filter((item) => !KEPT_TYPES_WITHOUT_BUILD.includes(item.type)).map((item) => item._id);
-  }
-  const deleted = new Set(items.filter((item) => buildKeyOf(item) !== null).map((item) => item._id));
-  const parents = grantParents(items);
-  const abcIds = new Set(items.filter((item) => ABC_TYPES.includes(item.type)).map((item) => item._id));
-  let grown = true;
-  while (grown) {
-    grown = false;
-    for (const item of items) {
-      if (deleted.has(item._id) || !belongsToDeleted(item, deleted, parents, abcIds)) continue;
-      deleted.add(item._id);
-      grown = true;
-    }
-  }
-  return items.filter((item) => deleted.has(item._id)).map((item) => item._id);
+export function isUsedUp(snapshot, key) {
+  const gearKeys = snapshot?.gearKeys ?? [];
+  const hasRoot = snapshot?.roots?.has(key) ?? false;
+  return gearKeys.includes(key) && !hasRoot;
+}
+
+/**
+ * Every item update that restores the kept play state after the writes, one per item: kept contents and roots back in
+ * their containers, the kept item values (not with `restoreInventory`), innate spell uses and slot values.
+ */
+export function playStateItemUpdates(snapshot, itemSources, restoreInventory) {
+  const sources = listOf(itemSources);
+  const updates = [
+    ...containerRestores(snapshot, sources.map((source) => source._id)),
+    ...rootContainerRestores(snapshot, sources),
+    ...(restoreInventory ? [] : itemStateUpdates(snapshot, sources)),
+    ...spellUseUpdates(snapshot, sources),
+    ...entrySlotUpdates(snapshot, sources)
+  ];
+  return mergedById(updates);
 }
 
 /** The `_id` the root of this build key had before the rebuild, or null (new key, or an actor the connector did not build). */
@@ -63,12 +68,29 @@ export function keptRootId(snapshot, key) {
   return snapshot?.roots?.get(key)?.id ?? null;
 }
 
-/** The updates that put kept items back into their recreated containers (`[{_id, "system.containerId"}]`). */
-export function containerRestores(snapshot, createdIds) {
-  const present = new Set(createdIds ?? []);
+/** The updates that put kept items still present back into their recreated containers (`[{_id, "system.containerId"}]`). */
+export function containerRestores(snapshot, presentIds) {
+  const present = new Set(presentIds ?? []);
   return listOf(snapshot?.containers)
-    .filter((content) => present.has(content.containerId))
+    .filter((content) => present.has(content.containerId) && present.has(content.id))
     .map((content) => ({ _id: content.id, "system.containerId": content.containerId }));
+}
+
+/**
+ * The updates that put rebuilt roots the recipe leaves loose back into the Foundry container they were in (a kept
+ * item, not one of the build's own roots), when that container is still there.
+ */
+export function rootContainerRestores(snapshot, itemSources) {
+  const sources = listOf(itemSources);
+  const present = new Set(sources.map((source) => source._id));
+  const rootIds = new Set([...(snapshot?.roots?.values() ?? [])].map((root) => root.id));
+  const updates = [];
+  for (const source of sources.filter((candidate) => PHYSICAL_TYPES.includes(candidate.type))) {
+    const containerId = recreatedRootState(snapshot, source)?.containerId;
+    if (!present.has(containerId) || rootIds.has(containerId) || source.system?.containerId) continue;
+    updates.push({ _id: source._id, "system.containerId": containerId });
+  }
+  return updates;
 }
 
 /**
@@ -89,7 +111,8 @@ export function itemStateUpdates(snapshot, createdSources) {
 /** The updates that give rebuilt innate spells their kept uses, within the new uses per day. */
 export function spellUseUpdates(snapshot, spellSources) {
   const updates = [];
-  for (const source of listOf(spellSources).filter((item) => item.type === SPELL_TYPE)) {
+  const spells = listOf(spellSources).filter((item) => item.type === SPELL_TYPE && isRestoreTarget(snapshot, item));
+  for (const source of spells) {
     const max = source.system?.location?.uses?.max;
     const kept = snapshot?.spellUses?.get(itemRef(source, snapshot.built));
     if (!isFiniteNumber(max) || !isFiniteNumber(kept)) continue;
@@ -108,7 +131,7 @@ export function entrySlotUpdates(snapshot, entrySources) {
   const sources = listOf(entrySources);
   const spellRefs = spellRefsById(sources, snapshot?.built);
   const updates = [];
-  for (const entry of sources.filter((source) => source.type === ENTRY_TYPE)) {
+  for (const entry of sources.filter((source) => source.type === ENTRY_TYPE && isRestoreTarget(snapshot, source))) {
     const kept = snapshot?.entries?.get(itemRef(entry, snapshot.built));
     if (!kept) continue;
     const update = entryUpdate(entry, kept, spellRefs);
@@ -128,12 +151,6 @@ export function actorStateUpdate(snapshot, hpMax, focusMax) {
   return update;
 }
 
-/** Whether the connector built this actor (`flags[MODULE].build`). */
-export function isBuiltActor(actorSource) {
-  const build = actorSource?.flags?.[MODULE_ID]?.build;
-  return build !== null && typeof build === "object";
-}
-
 function actorValues(system) {
   return {
     hp: system?.attributes?.hp?.value,
@@ -143,14 +160,37 @@ function actorValues(system) {
   };
 }
 
-function rootStates(items) {
+/**
+ * Whether an item's spell uses and slots go into the snapshot: on a built actor its own roots and the items without a
+ * build key, not a split-off or traded-in item sharing a root's key.
+ */
+function isStateHolder(roots, built, item) {
+  const key = buildKeyOf(item);
+  if (!built || key === null) return true;
+  return roots.get(key)?.id === item._id;
+}
+
+/** The kept state of a rebuilt item recreated under its root's previous `_id`, else null (a new or a Foundry item). */
+function recreatedRootState(snapshot, source) {
+  const kept = snapshot?.roots?.get(buildKeyOf(source));
+  return kept && kept.id === source._id ? kept : null;
+}
+
+/** Whether a rebuilt item takes kept values: any item of an actor restored by name, else a keyless or recreated one. */
+function isRestoreTarget(snapshot, source) {
+  if (!snapshot?.built || buildKeyOf(source) === null) return true;
+  return recreatedRootState(snapshot, source) !== null;
+}
+
+function rootStates(actorSource) {
   const roots = new Map();
-  for (const item of items) {
-    const key = buildKeyOf(item);
-    if (key === null || roots.has(key)) continue;
-    roots.set(key, { id: item._id, ...physicalState(item) });
-  }
+  for (const [key, item] of ownRoots(actorSource)) roots.set(key, { id: item._id, ...physicalState(item) });
   return roots;
+}
+
+function builtGearKeys(actorSource) {
+  const keys = actorSource?.flags?.[MODULE_ID]?.build?.gearKeys;
+  return Array.isArray(keys) ? keys.filter((key) => typeof key === "string") : [];
 }
 
 function namedStates(items) {
@@ -161,7 +201,8 @@ function namedStates(items) {
 
 function physicalState(item) {
   if (!PHYSICAL_TYPES.includes(item.type)) return {};
-  return { quantity: item.system?.quantity, uses: item.system?.uses?.value, hp: item.system?.hp?.value };
+  const system = item.system ?? {};
+  return { quantity: system.quantity, uses: system.uses?.value, hp: system.hp?.value, containerId: system.containerId ?? null };
 }
 
 function spellUses(items, built) {
@@ -284,32 +325,8 @@ function keptContents(items, deleted) {
     .map((item) => ({ id: item._id, containerId: item.system.containerId }));
 }
 
-/** Granted id → granter ids, read from both sides of pf2e's grant link (`itemGrants` and `grantedBy`). */
-function grantParents(items) {
-  const parents = new Map();
-  const link = (parentId, childId) => {
-    if (!parents.has(childId)) parents.set(childId, new Set());
-    parents.get(childId).add(parentId);
-  };
-  for (const item of items) {
-    for (const grant of Object.values(item.flags?.pf2e?.itemGrants ?? {})) {
-      if (typeof grant?.id === "string") link(item._id, grant.id);
-    }
-    const granter = item.flags?.pf2e?.grantedBy?.id;
-    if (typeof granter === "string") link(granter, item._id);
-  }
-  return parents;
-}
-
-function belongsToDeleted(item, deleted, parents, abcIds) {
-  const granters = parents.get(item._id) ?? new Set();
-  if ([...granters].some((parentId) => deleted.has(parentId))) return true;
-  const location = item.system?.location;
-  return abcIds.has(location) && deleted.has(location);
-}
-
 function keptItemState(snapshot, physicalSources) {
-  if (snapshot?.built) return (source) => snapshot.roots.get(buildKeyOf(source)) ?? null;
+  if (snapshot?.built) return (source) => recreatedRootState(snapshot, source);
   const matchCurrent = currentItemMatcher(physicalSources, snapshot?.byName ?? []);
   return (source) => matchCurrent(source);
 }
@@ -336,14 +353,6 @@ function clampToMax(value, max) {
   return clamp(value, 0, max);
 }
 
-function clamp(value, low, high) {
-  return Math.min(Math.max(value, low), Math.max(low, high));
-}
-
 function itemsOf(actorSource) {
   return listOf(actorSource?.items);
-}
-
-function listOf(value) {
-  return Array.isArray(value) ? value.filter((entry) => entry !== null && typeof entry === "object") : [];
 }
